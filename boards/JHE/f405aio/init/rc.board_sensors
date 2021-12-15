@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# Omnibus F4SD specific board sensors init
+#------------------------------------------------------------------------------
+
+board_adc start
+
+mpu6000 -R 6 -s start
+
+bmp280 -I start
