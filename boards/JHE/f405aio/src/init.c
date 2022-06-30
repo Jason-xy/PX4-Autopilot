@@ -76,6 +76,7 @@
 #include <px4_arch/io_timer.h>
 #include <px4_platform_common/init.h>
 #include <px4_platform/board_dma_alloc.h>
+#include <px4_platform/gpio.h>
 
 # if defined(FLASH_BASED_PARAMS)
 #  include <parameters/flashparams/flashfs.h>
@@ -163,9 +164,7 @@ stm32_boardinitialize(void)
 	board_autoled_initialize();
 
 
-	/* configure ADC pins */
-	stm32_configgpio(GPIO_ADC1_IN12);	/* BATT_VOLTAGE_SENS */
-	stm32_configgpio(GPIO_ADC1_IN11);	/* BATT_CURRENT_SENS */
+	// stm32_configgpio(GPIO_ADC1_IN11);	/* BATT_CURRENT_SENS */
 	//stm32_configgpio(GPIO_ADC1_IN0);	/* RSSI analog in (TX of UART4 instead) */
 
 	// TODO: power peripherals
@@ -197,7 +196,8 @@ stm32_boardinitialize(void)
 	// TODO: RSSI
 	//stm32_configgpio(GPIO_RSSI_IN);
 
-	stm32_configgpio(GPIO_PPM_IN);
+	const uint32_t gpio[] = PX4_GPIO_INIT_LIST;
+	px4_gpio_init(gpio, arraySize(gpio));
 
 	/* configure SPI all interfaces GPIO */
 

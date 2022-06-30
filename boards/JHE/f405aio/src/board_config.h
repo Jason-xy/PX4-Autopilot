@@ -34,7 +34,7 @@
 /**
  * @file board_config.h
  *
- * omnibusf4sd internal definitions
+ * JHEF405Pro internal definitions
  */
 
 #pragma once
@@ -56,32 +56,42 @@
 /* LEDs */
 // power - green
 // LED1 - PB5 - blue
-#define GPIO_LED1       (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN5)
+#define GPIO_LED1       (GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN14)
 #define GPIO_LED_BLUE   GPIO_LED1
 
-#define BOARD_OVERLOAD_LED     LED_BLUE
+#define BOARD_HAS_CONTROL_STATUS_LEDS      1
+#define BOARD_ARMED_STATE_LED  LED_BLUE
 
 #define  FLASH_BASED_PARAMS
 
-/* Define Channel numbers must match above GPIO pin IN(n)*/
-#define ADC_RSSI_IN_CHANNEL                 GPIO_ADC2_IN10 //C00
-#define ADC_BATTERY_VOLTAGE_CHANNEL         GPIO_ADC2_IN13 //C03
-#define ADC_BATTERY_CURRENT_CHANNEL         GPIO_ADC2_IN12 //C02
-/*
- * ADC channels
- *
- * These are the channel numbers of the ADCs of the microcontroller that can be used by the Px4 Firmware in the adc driver
- */
-#define ADC_CHANNELS (1 << 0) | (1 << 11) | (1 << 12)
+#define ADC1_CH(n)                  (n)
+#define ADC1_GPIO(n)                GPIO_ADC1_IN##n
 
-#define ADC_BATTERY_VOLTAGE_CHANNEL  12
-#define ADC_BATTERY_CURRENT_CHANNEL  11
-#define ADC_RC_RSSI_CHANNEL          0
+#define PX4_ADC_GPIO  \
+	/* PC0 */  ADC1_GPIO(10),  \
+	/* PC3 */  ADC1_GPIO(12),  \
+	/* PC2 */  ADC1_GPIO(13)
+
+/* Define Channel numbers must match above GPIO pin IN(n)*/
+#define ADC_RSSI_IN_CHANNEL                 ADC1_CH(10) //C00
+#define ADC_BATTERY_VOLTAGE_CHANNEL         ADC1_CH(13) //C03
+#define ADC_BATTERY_CURRENT_CHANNEL         ADC1_CH(12) //C02
+
+#define ADC_CHANNELS \
+	((1 << ADC_BATTERY_VOLTAGE_CHANNEL)       | \
+	 (1 << ADC_BATTERY_CURRENT_CHANNEL)       | \
+	 (1 << ADC_RSSI_IN_CHANNEL))
 
 /* Define Battery 1 Voltage Divider and A per V
  */
 #define BOARD_BATTERY1_V_DIV         (10.9f)
 #define BOARD_BATTERY1_A_PER_V       (17.f)
+
+#define BOARD_NUMBER_BRICKS             1
+#define BOARD_ADC_BRICK_VALID   (1)
+
+#define GPIO_TONE_ALARM_IDLE    /* PD15 */ (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN13)
+#define GPIO_TONE_ALARM_GPIO    /* PD15 */ (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN13)
 
 /* User GPIOs
  *
@@ -137,6 +147,7 @@
 
 #define RC_SERIAL_PORT               "/dev/ttyS3"
 #define BOARD_SUPPORTS_RC_SERIAL_PORT_OUTPUT
+#define GPIO_RSSI_IN                      (GPIO_INPUT|GPIO_PULLUP|GPIO_PORTC|GPIO_PIN0)
 
 /*
  * One RC_IN
@@ -162,6 +173,12 @@
 #define BOARD_CONSOLE_BUFFER_SIZE (1024*3)
 
 #define BOARD_DSHOT_MOTOR_ASSIGNMENT {2, 3, 1, 0};
+
+#define PX4_GPIO_INIT_LIST { \
+		PX4_ADC_GPIO,                     \
+		GPIO_TONE_ALARM_IDLE,             \
+		GPIO_RSSI_IN,                \
+	}
 
 __BEGIN_DECLS
 
