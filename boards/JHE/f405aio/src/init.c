@@ -231,7 +231,7 @@ stm32_boardinitialize(void)
  ****************************************************************************/
 
 static struct spi_dev_s *spi1;
-static struct spi_dev_s *spi2;
+// static struct spi_dev_s *spi2;
 static struct spi_dev_s *spi3;
 
 __EXPORT int board_app_initialize(uintptr_t arg)
@@ -287,22 +287,22 @@ __EXPORT int board_app_initialize(uintptr_t arg)
 	SPI_SETMODE(spi1, SPIDEV_MODE3);
 	up_udelay(20);
 
-	// SPI2: SDCard
+	// SPI3: SDCard
 	/* Get the SPI port for the microSD slot */
-	spi2 = stm32_spibus_initialize(CONFIG_NSH_MMCSDSPIPORTNO);
+	spi3 = stm32_spibus_initialize(CONFIG_NSH_MMCSDSPIPORTNO);
 
-	if (!spi2) {
+	if (!spi3) {
 		syslog(LOG_ERR, "[boot] FAILED to initialize SPI port %d\n", CONFIG_NSH_MMCSDSPIPORTNO);
 		led_on(LED_BLUE);
 		return -ENODEV;
 	}
 
 	/* Now bind the SPI interface to the MMCSD driver */
-	int result = mmcsd_spislotinitialize(CONFIG_NSH_MMCSDMINOR, CONFIG_NSH_MMCSDSLOTNO, spi2);
+	int result = mmcsd_spislotinitialize(CONFIG_NSH_MMCSDMINOR, CONFIG_NSH_MMCSDSLOTNO, spi3);
 
 	if (result != OK) {
 		led_on(LED_BLUE);
-		syslog(LOG_ERR, "[boot] FAILED to bind SPI port 2 to the MMCSD driver\n");
+		syslog(LOG_ERR, "[boot] FAILED to bind SPI port 3 to the MMCSD driver\n");
 		return -ENODEV;
 	}
 
@@ -310,24 +310,24 @@ __EXPORT int board_app_initialize(uintptr_t arg)
 
 
 	// SPI3: OSD / Baro
-	spi3 = stm32_spibus_initialize(3);
+	// spi3 = stm32_spibus_initialize(3);
 
-	if (!spi3) {
-		syslog(LOG_ERR, "[boot] FAILED to initialize SPI port 3\n");
-		led_on(LED_BLUE);
-		return -ENODEV;
-	}
+	// if (!spi3) {
+	// 	syslog(LOG_ERR, "[boot] FAILED to initialize SPI port 3\n");
+	// 	led_on(LED_BLUE);
+	// 	return -ENODEV;
+	// }
 
-	/* Copied from fmu-v4
-	 * Default SPI3 to 12MHz and de-assert the known chip selects.
-	 * MS5611 has max SPI clock speed of 20MHz
-	 */
+	// /* Copied from fmu-v4
+	//  * Default SPI3 to 12MHz and de-assert the known chip selects.
+	//  * MS5611 has max SPI clock speed of 20MHz
+	//  */
 
-	// BMP280 max SPI speed is 10 MHz
-	SPI_SETFREQUENCY(spi3, 10 * 1000 * 1000);
-	SPI_SETBITS(spi3, 8);
-	SPI_SETMODE(spi3, SPIDEV_MODE3);
-	up_udelay(20);
+	// // BMP280 max SPI speed is 10 MHz
+	// SPI_SETFREQUENCY(spi3, 10 * 1000 * 1000);
+	// SPI_SETBITS(spi3, 8);
+	// SPI_SETMODE(spi3, SPIDEV_MODE3);
+	// up_udelay(20);
 
 #if defined(FLASH_BASED_PARAMS)
 	static sector_descriptor_t params_sector_map[] = {
