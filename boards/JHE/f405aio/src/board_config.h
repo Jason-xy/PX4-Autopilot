@@ -52,7 +52,7 @@
  ****************************************************************************************************/
 /* Configuration ************************************************************************************/
 
-/* omnibusf4sd GPIOs ***********************************************************************************/
+/* JHF F105AIO GPIOs ***********************************************************************************/
 /* LEDs */
 // power - green
 // LED1 - PB5 - blue
@@ -63,6 +63,10 @@
 
 #define  FLASH_BASED_PARAMS
 
+/* Define Channel numbers must match above GPIO pin IN(n)*/
+#define ADC_RSSI_IN_CHANNEL                 GPIO_ADC2_IN10 //C00
+#define ADC_BATTERY_VOLTAGE_CHANNEL         GPIO_ADC2_IN13 //C03
+#define ADC_BATTERY_CURRENT_CHANNEL         GPIO_ADC2_IN12 //C02
 /*
  * ADC channels
  *
@@ -76,8 +80,8 @@
 
 /* Define Battery 1 Voltage Divider and A per V
  */
-#define BOARD_BATTERY1_V_DIV         (11.12f)
-#define BOARD_BATTERY1_A_PER_V       (31.f)
+#define BOARD_BATTERY1_V_DIV         (10.9f)
+#define BOARD_BATTERY1_A_PER_V       (17.f)
 
 /* User GPIOs
  *
@@ -131,7 +135,7 @@
 #define HRT_PPM_CHANNEL              3 // capture/compare channel 3
 #define GPIO_PPM_IN                  (GPIO_ALT|GPIO_AF2|GPIO_PULLUP|GPIO_PORTB|GPIO_PIN8)
 
-#define RC_SERIAL_PORT               "/dev/ttyS0"
+#define RC_SERIAL_PORT               "/dev/ttyS3"
 #define BOARD_SUPPORTS_RC_SERIAL_PORT_OUTPUT
 
 /*
