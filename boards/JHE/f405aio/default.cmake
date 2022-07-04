@@ -23,12 +23,12 @@ px4_add_board(
 		#distance_sensor # all available distance sensor drivers
 		dshot
 		gps
-		imu/invensense/icm20602
+		# imu/invensense/icm20602
 		imu/invensense/mpu6000
 		#irlock
 		lights/rgbled
 		#magnetometer # all available magnetometer drivers
-		magnetometer/hmc5883
+		#magnetometer/hmc5883
 		#optical_flow # all available optical flow drivers
 		osd
 		#pca9685
