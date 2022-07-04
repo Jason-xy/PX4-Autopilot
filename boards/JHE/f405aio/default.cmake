@@ -56,7 +56,7 @@ px4_add_board(
 		land_detector
 		#landing_target_estimator
 		load_mon
-		#local_position_estimator
+		# local_position_estimator
 		logger
 		mavlink
 		mc_att_control
@@ -98,7 +98,7 @@ px4_add_board(
 		#serial_test
 		#system_time
 		top
-		#topic_listener
+		topic_listener
 		tune_control
 		uorb
 		usb_connected
