@@ -38,6 +38,7 @@ px4_add_board(
 		rc_input
 		#telemetry # all available telemetry drivers
 		telemetry/frsky_telemetry
+		encoder/ecoder20
 	MODULES
 		#airspeed_selector
 		attitude_estimator_q
