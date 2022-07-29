@@ -10,8 +10,8 @@ px4_add_board(
 	ROMFSROOT px4fmu_common
 	CONSTRAINED_FLASH
 	SERIAL_PORTS
-		TEL1:/dev/ttyS0
-		TEL2:/dev/ttyS1
+		TEL1:/dev/ttyS5
+		TEL2:/dev/ttyS0
 		RC:/dev/ttyS3 # UART4
 	DRIVERS
 		adc/board_adc
@@ -30,7 +30,7 @@ px4_add_board(
 		#magnetometer # all available magnetometer drivers
 		#magnetometer/hmc5883
 		#optical_flow # all available optical flow drivers
-		osd
+		#osd
 		#pca9685
 		#pwm_input
 		#pwm_out_sim
@@ -41,7 +41,7 @@ px4_add_board(
 		encoder/ecoder20
 	MODULES
 		#airspeed_selector
-		attitude_estimator_q
+		#attitude_estimator_q
 		battery_status
 		#camera_feedback
 		commander
@@ -80,7 +80,7 @@ px4_add_board(
 		dmesg
 		dumpfile
 		esc_calib
-		#gpio
+		gpio
 		hardfault_log
 		i2cdetect
 		led_control
