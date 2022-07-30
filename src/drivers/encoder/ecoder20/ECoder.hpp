@@ -51,7 +51,7 @@
 #include <uORB/SubscriptionInterval.hpp>
 #include <uORB/topics/parameter_update.h>
 
-#define ECODER_BUFFER_SIZE 256
+#define ECODER_BUFFER_SIZE 64
 #define ECODER_WRITE_SIZE 16
 
 class ECoder : public ModuleBase<ECoder>, public ModuleParams, public px4::ScheduledWorkItem

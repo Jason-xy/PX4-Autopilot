@@ -50,7 +50,6 @@ static uint8_t commands[] {
 
 
 #define ECODER_BITRATE 2500000
-
 using namespace time_literals;
 
 uint8_t CRC_C(uint8_t *CRCbuf, uint8_t* CRC_8X1,uint8_t Length);
@@ -81,7 +80,7 @@ ECoder::init()
 	_rcs_fd = open(_device, O_RDWR | O_NONBLOCK);
 	struct termios t;
 	tcgetattr(_rcs_fd, &t);
-	t.c_cflag &= ~(CSIZE | PARENB | CSTOPB);
+	t.c_cflag &= ~(CSIZE | PARENB | CSTOPB | CRTSCTS);
 	t.c_cflag |= (CS8);
 	cfsetspeed(&t, ECODER_BITRATE);
 	tcsetattr(_rcs_fd, TCSANOW, &t);
@@ -170,22 +169,30 @@ void ECoder::Run()
 
 			updateParams();
 		}
-		for (unsigned i = 0; i < 10; i++) {
-			::write(_rcs_fd, &commands[0], 1);
-		}
+		::write(_rcs_fd, &commands[3], 1);
 		// const hrt_abstime cycle_timestamp = hrt_absolute_time();
 		int newBytes = 0;
-		usleep(100);
-		newBytes = ::read(_rcs_fd, &_serial_buf[3], ECODER_BUFFER_SIZE);
+		usleep(50);
+		newBytes = ::read(_rcs_fd, &_serial_buf[0], ECODER_BUFFER_SIZE);
 		if (newBytes > 0) {
-			PX4_INFO("New bytes %d", newBytes);
-			for (int i = 0; i<newBytes; i ++) {
-				PX4_INFO("%d:%x", i, _serial_buf[i]);
+			int start_byte=0;
+			if (newBytes == 10) {
+				//Currently it jumps the second zero byte.
+				start_byte = 0;
+			} else {
+				return;
 			}
-		} else {
-			if (count_send %10 == 0) {
-				PX4_INFO("No data received");
-			}
+			int32_t single_Turn = _serial_buf[start_byte + 1] | _serial_buf[start_byte + 2] << 8
+				| _serial_buf[start_byte + 3] << 16;
+			float resolution = (float) (1<<_serial_buf[start_byte + 4]);
+			float abs_angle = (float)single_Turn/resolution*M_TWOPI_F;
+			// PX4_INFO_RAW("New bytes %d:", newBytes);
+			// for (int i = 0; i<newBytes; i ++) {
+			// 	PX4_INFO_RAW("%d:%x ", i, _serial_buf[i]);
+			// }
+			// PX4_INFO_RAW("\n");
+			PX4_INFO("single_Turn :%d resolution %.1f Abs Angle: %.1f", single_Turn, (double)resolution,
+				(double) abs_angle*M_RAD_TO_DEG);
 		}
 		if (newBytes > 0) {
 			_bytes_rx += newBytes;
