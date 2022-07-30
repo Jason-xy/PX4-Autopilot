@@ -45,7 +45,6 @@
 #include <px4_platform_common/log.h>
 #include <px4_platform_common/module.h>
 #include <px4_platform_common/module_params.h>
-#include <px4_platform_common/px4_work_queue/ScheduledWorkItem.hpp>
 #include <uORB/PublicationMulti.hpp>
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionInterval.hpp>
@@ -53,7 +52,7 @@
 #include "ECoderReader.h"
 
 
-class ECoder : public ModuleBase<ECoder>, public ModuleParams, public px4::ScheduledWorkItem
+class ECoder : public ModuleBase<ECoder>, public ModuleParams
 {
 public:
 
@@ -74,23 +73,19 @@ public:
 
 	int	init();
 
-	int count_send = 0;
-	ECoderReader * reader0;
-	ECoderReader * reader1;
+	ECoderReader * reader0 = nullptr;
+	ECoderReader * reader1 = nullptr;
 	char		_device0[20] {};
 	char		_device1[20] {};
+	void start(uint32_t interval_us);
+
 private:
-
-	void Run() override;
-
-	bool _initialized{false};
 	bool _report_lock{true};
 
 	static constexpr unsigned	_current_update_interval{1000}; // 1000 Hz
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1000000};
 
-	perf_counter_t	_cycle_perf;
 	perf_counter_t	_publish_interval_perf;
 	uint32_t	_bytes_rx{0};
 };

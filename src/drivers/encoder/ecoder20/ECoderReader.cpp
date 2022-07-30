@@ -16,8 +16,10 @@ uint8_t ECoderReader::CRC8X1[CRC_TAB_SIZE];
 uint8_t CRC_C(uint8_t *CRCbuf, uint8_t* CRC_8X1,uint8_t Length);
 void CRC_8X1_TAB_Creat(uint8_t *CRC_8X1);
 
-ECoderReader::ECoderReader(int reader_id, const char *device):
-	_reader_id(reader_id) {
+ECoderReader::ECoderReader(const char * module_name, int reader_id, const char *device):
+	ScheduledWorkItem(module_name, px4::serial_port_to_wq(device)),
+	_reader_id(reader_id),
+	_cycle_perf(perf_alloc(PC_ELAPSED, module_name)) {
 	if (device) {
 		strncpy(_device, device, sizeof(_device) - 1);
 		_device[sizeof(_device) - 1] = '\0';
@@ -27,6 +29,7 @@ ECoderReader::ECoderReader(int reader_id, const char *device):
 
 ECoderReader::~ECoderReader() {
 	close(_rcs_fd);
+	perf_free(_cycle_perf);
 }
 
 int ECoderReader::init() {
@@ -69,20 +72,51 @@ int ECoderReader::read_once(uint32_t & total_bytes) {
 		int32_t single_Turn = dataBuf[2] | dataBuf[3] << 8
 			| dataBuf[4] << 16;
 		float resolution = (float) (1<<dataBuf[5]);
-		float abs_angle = (float)single_Turn/resolution*M_TWOPI_F;
+		real_time_angle = (float)single_Turn/resolution*M_TWOPI_F;
 		// PX4_INFO_RAW("New bytes %d:", newBytes);
 		// for (int i = 0; i<newBytes; i ++) {
 		// 	PX4_INFO_RAW("%d:%x ", i, _serial_buf[i]);
 		// }
 		// PX4_INFO_RAW("\n");
 		uint8_t crc = CRC_C(dataBuf, CRC8X1, ECODER_RES_FRAME_LEN);
-		PX4_INFO("ECoder %d, single_Turn :%d resolution %.1f Abs Angle: %.1f CRC %d", _reader_id,
-			single_Turn, (double)resolution, (double) abs_angle*M_RAD_TO_DEG, crc);
+		// PX4_INFO("ECoder %d, single_Turn :%d resolution %.1f Abs Angle: %.1f CRC %d", _reader_id,
+		// 	single_Turn, (double)resolution, (double) real_time_angle*M_RAD_TO_DEG, crc);
 		if (crc == 0) {
 			return PX4_OK;
 		}
 	}
 	return PX4_ERROR;
+}
+
+
+void ECoderReader::Run()
+{
+	// if (should_exit()) {
+	// 	exit_and_cleanup();
+	// 	return;
+	// }
+	if (!_initialized) {
+		if (init() == PX4_OK) {
+			_initialized = true;
+		}
+	} else {
+		perf_begin(_cycle_perf);
+		ask();
+		usleep(50);
+		int32_t succ = read_once(_bytes_rx);
+		if (succ == PX4_OK) {
+			ecoder_ok = 1;
+		}
+		perf_end(_cycle_perf);
+	}
+}
+
+void ECoderReader::print_status() {
+	PX4_INFO("UART device%d: %s", _reader_id, _device);
+	PX4_INFO("UART RX bytes: %"  PRIu32, _bytes_rx);
+	PX4_INFO("ECoder %d: valid %d angle %4.1fdeg", _reader_id,
+		ecoder_ok, (double) (real_time_angle*M_RAD_TO_DEG_F));
+	perf_print_counter(_cycle_perf);
 }
 
 uint8_t CRC_C(uint8_t *CRCbuf, uint8_t* CRC_8X1,uint8_t Length)

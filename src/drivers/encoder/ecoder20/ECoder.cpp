@@ -39,21 +39,21 @@ using namespace time_literals;
 
 ECoder::ECoder(const char *device0, const char * device1) :
 	ModuleParams(nullptr),
-	ScheduledWorkItem(MODULE_NAME, px4::serial_port_to_wq(device0)),
-	_cycle_perf(perf_alloc(PC_ELAPSED, MODULE_NAME": cycle time")),
+
 	_publish_interval_perf(perf_alloc(PC_INTERVAL, MODULE_NAME": publish interval"))
 {
 	if (device0) {
-		reader0 = new ECoderReader(0, device0);
+		PX4_INFO("Start ecoder 0 on %s", device0);
+		reader0 = new ECoderReader("ecoder_0", 0, device0);
 	}
 	if (device1) {
-		reader1 = new ECoderReader(1, device1);
+		PX4_INFO("start ecoder 1 on %s", device1);
+		reader1 = new ECoderReader("ecoder_0", 1, device1);
 	}
 }
 
 ECoder::~ECoder()
 {
-	perf_free(_cycle_perf);
 	perf_free(_publish_interval_perf);
 }
 
@@ -79,13 +79,16 @@ ECoder::task_spawn(int argc, char *argv[])
 	int ch;
 	const char *myoptarg = nullptr;
 	const char *device0 = nullptr;
+	const char *device1 = nullptr;
 
-	while ((ch = px4_getopt(argc, argv, "d:", &myoptind, &myoptarg)) != EOF) {
+	while ((ch = px4_getopt(argc, argv, "d:D:", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
 		case 'd':
 			device0 = myoptarg;
 			break;
-
+		case 'D':
+			device1 = myoptarg;
+			break;
 		case '?':
 			error_flag = true;
 			break;
@@ -106,7 +109,7 @@ ECoder::task_spawn(int argc, char *argv[])
 		return PX4_ERROR;
 	}
 
-	ECoder *instance = new ECoder(device0, nullptr);
+	ECoder *instance = new ECoder(device0, device1);
 
 	if (instance == nullptr) {
 		PX4_ERR("alloc failed");
@@ -115,58 +118,19 @@ ECoder::task_spawn(int argc, char *argv[])
 
 	_object.store(instance);
 	_task_id = task_id_is_work_queue;
-
-	instance->ScheduleOnInterval(_current_update_interval);
-
+	instance->start(_current_update_interval);
 	return PX4_OK;
 }
 
-void ECoder::Run()
-{
-	if (should_exit()) {
-		exit_and_cleanup();
-		return;
+void ECoder::start(uint32_t interval_us) {
+	if (reader0) {
+		reader0->ScheduleOnInterval(interval_us);
 	}
-
-	if (!_initialized) {
-		if (init() == PX4_OK) {
-			_initialized = true;
-		}
-	} else {
-
-		perf_begin(_cycle_perf);
-
-		// Check if parameters have changed
-		if (_parameter_update_sub.updated()) {
-			// clear update
-			parameter_update_s param_update;
-			_parameter_update_sub.copy(&param_update);
-
-			updateParams();
-		}
-
-		if (reader0) {
-			reader0->ask();
-		}
-		if (reader1) {
-			reader1->ask();
-		}
-		usleep(50);
-		if (reader0) {
-			int32_t succ = reader0->read_once(_bytes_rx);
-			if (succ) {
-				PX4_INFO("Succ");
-			}
-		}
-		if (reader1) {
-			int32_t succ = reader1->read_once(_bytes_rx);
-			if (succ) {
-				PX4_INFO("Succ");
-			}
-		}
-		count_send += 1;
+	if (reader1) {
+		reader1->ScheduleOnInterval(interval_us);
 	}
 }
+
 
 int ECoder::custom_command(int argc, char *argv[])
 {
@@ -177,14 +141,12 @@ int ECoder::print_status()
 {
 	PX4_INFO("Max update rate: %u Hz", 1000000 / _current_update_interval);
 
-	if (_device0[0] != '\0') {
-		PX4_INFO("UART device0: %s", _device0);
+	if (reader0) {
+		reader0->print_status();
 	}
-	if (_device1[0] != '\0') {
-		PX4_INFO("UART device1: %s", _device1);
+	if (reader1) {
+		reader1->print_status();
 	}
-	PX4_INFO("UART RX bytes: %"  PRIu32, _bytes_rx);
-	perf_print_counter(_cycle_perf);
 	perf_print_counter(_publish_interval_perf);
 	return 0;
 }
@@ -204,7 +166,8 @@ Encoder
 
 	PRINT_MODULE_USAGE_NAME("ecoder", "driver");
 	PRINT_MODULE_USAGE_COMMAND("start");
-	PRINT_MODULE_USAGE_PARAM_STRING('d', "/dev/ttyS3", "<file:dev>", "RC device", true);
+	PRINT_MODULE_USAGE_PARAM_STRING('d', "/dev/ttyS1", "<file:dev>", "ECoder device 0", true);
+	PRINT_MODULE_USAGE_PARAM_STRING('D', "/dev/ttyS2", "<file:dev>", "ECoder device 1", true);
 	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
 
 	return 0;
