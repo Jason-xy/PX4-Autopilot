@@ -4,6 +4,8 @@
 #include <float.h>
 #include <stdint.h>
 #include <px4_platform_common/px4_work_queue/ScheduledWorkItem.hpp>
+#include <uORB/topics/sensor_motor_encoder.h>
+#include <uORB/Publication.hpp>
 
 #define ECODER_BUFFER_SIZE 64
 #define ECODER_WRITE_SIZE 16
@@ -21,14 +23,22 @@ class ECoderReader : public px4::ScheduledWorkItem {
 	void Run() override;
 	perf_counter_t	_cycle_perf{0};
 	bool _initialized{false};
-public:
+	uORB::Publication<sensor_motor_encoder_s>	_encoder_pub{ORB_ID(sensor_motor_encoder)};			/**< rate setpoint publication */
+	uint64_t last_ask_time{0};
+	int32_t last_multi_turn{0};
+	uint64_t last_multi_turn_time{0};
+
+	uint8_t ecoder_ok {0};
+	float real_time_angle {0};
+	float real_time_rpm {0};
 	uint32_t _bytes_rx {0};
-	uint8_t ecoder_ok = 0;
-	float real_time_angle = 0;
-	ECoderReader(const char * module_name, int reader_id, const char *device);
-	virtual ~ECoderReader();
+	sensor_motor_encoder_s data;
+
 	int read_once(uint32_t & new_bytes);
 	void ask();
+public:
 	int init();
+	ECoderReader(const char * module_name, int reader_id, const char *device);
+	virtual ~ECoderReader();
 	void print_status();
 };

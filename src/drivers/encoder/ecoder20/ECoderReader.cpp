@@ -53,39 +53,67 @@ int ECoderReader::init() {
 
 void ECoderReader::ask() {
 	::write(_rcs_fd, &commands[3], 1);
+	last_ask_time = hrt_absolute_time();
 }
 
 int ECoderReader::read_once(uint32_t & total_bytes) {
 	// const hrt_abstime cycle_timestamp = hrt_absolute_time();
 	int newBytes = 0;
 	newBytes = ::read(_rcs_fd, &_serial_buf[0], ECODER_BUFFER_SIZE);
-	if (newBytes > 0) {
-		total_bytes += newBytes;
-		if (newBytes == 10) {
-			//Currently it jumps the second zero byte.
-			dataBuf[0] = _serial_buf[0];
-			dataBuf[1] = 0;
-			memcpy(dataBuf+2, _serial_buf+1, 9);
-		} else {
-			return newBytes;
-		}
-		int32_t single_Turn = dataBuf[2] | dataBuf[3] << 8
-			| dataBuf[4] << 16;
-		float resolution = (float) (1<<dataBuf[5]);
-		real_time_angle = (float)single_Turn/resolution*M_TWOPI_F;
-		// PX4_INFO_RAW("New bytes %d:", newBytes);
-		// for (int i = 0; i<newBytes; i ++) {
-		// 	PX4_INFO_RAW("%d:%x ", i, _serial_buf[i]);
-		// }
-		// PX4_INFO_RAW("\n");
-		uint8_t crc = CRC_C(dataBuf, CRC8X1, ECODER_RES_FRAME_LEN);
-		// PX4_INFO("ECoder %d, single_Turn :%d resolution %.1f Abs Angle: %.1f CRC %d", _reader_id,
-		// 	single_Turn, (double)resolution, (double) real_time_angle*M_RAD_TO_DEG, crc);
-		if (crc == 0) {
-			return PX4_OK;
-		}
+	if (newBytes == 0) {
+		return PX4_ERROR;
 	}
-	return PX4_ERROR;
+	total_bytes += newBytes;
+	if (newBytes == 10) {
+		//Currently it jumps the second zero byte.
+		dataBuf[0] = _serial_buf[0];
+		dataBuf[1] = 0;
+		memcpy(dataBuf+2, _serial_buf+1, 9);
+	} else {
+		return newBytes;
+	}
+	uint8_t crc = CRC_C(dataBuf, CRC8X1, ECODER_RES_FRAME_LEN);
+	if (crc != 0) {
+		return PX4_ERROR;
+	}
+	int32_t single_Turn = dataBuf[2] | dataBuf[3] << 8
+		| dataBuf[4] << 16;
+	float resolution = (float) (1<<dataBuf[5]);
+	real_time_angle = (float)single_Turn/resolution*M_TWOPI_F;
+	int32_t multi_Turn =   dataBuf[6] | dataBuf[7] << 8
+		| dataBuf[8] << 16;
+	float rpm = 0;
+	bool rpm_updated = false;
+	if (multi_Turn != last_multi_turn) {
+		float dt = ((float)(last_ask_time - last_multi_turn_time))/1000000.0f;
+		int turns = multi_Turn - last_multi_turn;
+		if (abs(turns) < 5) {
+			//Else is cross zero..
+			rpm = ((float)turns)*60/dt;
+			rpm_updated = true;
+		}
+		last_multi_turn_time = last_ask_time;
+		last_multi_turn = multi_Turn;
+	}
+
+	if (rpm_updated) {
+		real_time_rpm = rpm;
+	}
+	data.timestamp = last_ask_time;//
+	data.motor_id = _reader_id;
+	data.motor_rpm = real_time_rpm;
+	data.motor_abs_angle = real_time_angle;
+	data.multi_turns = last_multi_turn;
+	_encoder_pub.publish(data);
+	// PX4_INFO("Publishing...");
+	// PX4_INFO_RAW("New bytes %d:", newBytes);
+	// for (int i = 0; i<newBytes; i ++) {
+	// 	PX4_INFO_RAW("%d:%x ", i, _serial_buf[i]);
+	// }
+	// PX4_INFO_RAW("\n");
+	// PX4_INFO("ECoder %d, single_Turn :%d resolution %.1f Abs Angle: %.1f CRC %d", _reader_id,
+	// 	single_Turn, (double)resolution, (double) real_time_angle*M_RAD_TO_DEG, crc);
+	return PX4_OK;
 }
 
 
@@ -102,7 +130,7 @@ void ECoderReader::Run()
 	} else {
 		perf_begin(_cycle_perf);
 		ask();
-		usleep(50);
+		usleep(60);
 		int32_t succ = read_once(_bytes_rx);
 		if (succ == PX4_OK) {
 			ecoder_ok = 1;
@@ -114,8 +142,8 @@ void ECoderReader::Run()
 void ECoderReader::print_status() {
 	PX4_INFO("UART device%d: %s", _reader_id, _device);
 	PX4_INFO("UART RX bytes: %"  PRIu32, _bytes_rx);
-	PX4_INFO("ECoder %d: valid %d angle %4.1fdeg", _reader_id,
-		ecoder_ok, (double) (real_time_angle*M_RAD_TO_DEG_F));
+	PX4_INFO("ECoder %d: valid %d angle %4.1fdeg turns %d rpm %4.1f", _reader_id,
+		ecoder_ok, (double) (real_time_angle*M_RAD_TO_DEG_F), last_multi_turn, (double)real_time_rpm);
 	perf_print_counter(_cycle_perf);
 }
 
