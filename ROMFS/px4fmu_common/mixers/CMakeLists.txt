@@ -80,6 +80,7 @@ px4_add_romfs_files(
 	rover_diff_and_servo.main.mix
 	rover_generic.main.mix
 	standard_vtol_hitl.main.mix
+	SL_pass.main.mix
 	TF-AutoG2.main.mix
 	tilt_quad.aux.mix
 	tilt_quad.main.mix

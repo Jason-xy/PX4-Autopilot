@@ -20,6 +20,7 @@ float SLMixer::mix(float calibed_angle, float rpm, const Vector3f & thrust, cons
 	cyclic_pharse = atan2f(n_x, n_y);
 	cyclic_amp = sqrtf(n_x*n_x + n_y*n_y);
 	output = _amp * cyclic_amp * sinf(calibed_angle -_phrase_offset - _dir*cyclic_pharse) + thrust(2) - torque(2)*_dir;
+	output = math::max(output, 0.0f);
 	return output;
 }
 

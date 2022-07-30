@@ -88,6 +88,7 @@ void SwashplatelessMixer::Run()
 		float output = sl_mixer[motor_id]->mix(calibed_angle, v_motor_enc.motor_rpm, thrust, torque);
 		v_actuator_controls_output.control[motor_id] = output;
 		v_actuator_controls_output.timestamp = hrt_absolute_time();
+		_actuators_pub.publish(v_actuator_controls_output);
 		// sl_mixer[motor_id]->print_status();
 		// PX4_INFO("motor %d ctrl:%.1f ABS pos:%.1f caled %.1f rpm:%.1f actuator: %.2f %.2f %.2f %.2f",
 		// 	v_motor_enc.motor_id, (double) output, (double) (v_motor_enc.motor_abs_angle*M_RAD_TO_DEG_F),

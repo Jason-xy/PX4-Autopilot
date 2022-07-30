@@ -1,0 +1,30 @@
+Passthrough mixer for PX4IO
+============================
+
+This file defines passthrough mixers suitable for testing.
+
+Channel group 5, channels 0-7 are passed directly through to the outputs.
+
+M: 1
+S: 5 0  10000  10000      0 -10000  10000
+
+M: 1
+S: 5 1  10000  10000      0 -10000  10000
+
+M: 1
+S: 5 2  10000  10000      0 -10000  10000
+
+M: 1
+S: 5 3  10000  10000      0 -10000  10000
+
+M: 1
+S: 5 4  10000  10000      0 -10000  10000
+
+M: 1
+S: 5 5  10000  10000      0 -10000  10000
+
+M: 1
+S: 5 6  10000  10000      0 -10000  10000
+
+M: 1
+S: 5 7  10000  10000      0 -10000  10000
