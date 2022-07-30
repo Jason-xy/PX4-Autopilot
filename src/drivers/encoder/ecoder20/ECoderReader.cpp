@@ -19,7 +19,8 @@ void CRC_8X1_TAB_Creat(uint8_t *CRC_8X1);
 ECoderReader::ECoderReader(const char * module_name, int reader_id, const char *device):
 	ScheduledWorkItem(module_name, px4::serial_port_to_wq(device)),
 	_reader_id(reader_id),
-	_cycle_perf(perf_alloc(PC_ELAPSED, module_name)) {
+	_cycle_perf(perf_alloc(PC_INTERVAL, module_name)),
+	_process_perf(perf_alloc(PC_ELAPSED, "Ecoder::ProcessData")) {
 	if (device) {
 		strncpy(_device, device, sizeof(_device) - 1);
 		_device[sizeof(_device) - 1] = '\0';
@@ -30,6 +31,7 @@ ECoderReader::ECoderReader(const char * module_name, int reader_id, const char *
 ECoderReader::~ECoderReader() {
 	close(_rcs_fd);
 	perf_free(_cycle_perf);
+	perf_free(_process_perf);
 }
 
 int ECoderReader::init() {
@@ -56,22 +58,8 @@ void ECoderReader::ask() {
 	last_ask_time = hrt_absolute_time();
 }
 
-int ECoderReader::read_once(uint32_t & total_bytes) {
-	// const hrt_abstime cycle_timestamp = hrt_absolute_time();
-	int newBytes = 0;
-	newBytes = ::read(_rcs_fd, &_serial_buf[0], ECODER_BUFFER_SIZE);
-	if (newBytes == 0) {
-		return PX4_ERROR;
-	}
-	total_bytes += newBytes;
-	if (newBytes == 10) {
-		//Currently it jumps the second zero byte.
-		dataBuf[0] = _serial_buf[0];
-		dataBuf[1] = 0;
-		memcpy(dataBuf+2, _serial_buf+1, 9);
-	} else {
-		return newBytes;
-	}
+int ECoderReader::process_data() {
+	perf_begin(_process_perf);
 	uint8_t crc = CRC_C(dataBuf, CRC8X1, ECODER_RES_FRAME_LEN);
 	if (crc != 0) {
 		return PX4_ERROR;
@@ -105,14 +93,55 @@ int ECoderReader::read_once(uint32_t & total_bytes) {
 	data.motor_abs_angle = real_time_angle;
 	data.multi_turns = last_multi_turn;
 	_encoder_pub.publish(data);
-	// PX4_INFO("Publishing...");
-	// PX4_INFO_RAW("New bytes %d:", newBytes);
+	uint64_t time = hrt_absolute_time();
+	real_time_freq = real_time_freq*0.9f + 0.1f / ((float)(time - last_read_time) / 1000000.0f);
+	last_read_time = time;
+	perf_end(_process_perf);
+	// PX4_INFO("ECoder %d, single_Turn :%d resolution %.1f Abs Angle: %.1f CRC %d", _reader_id,
+	// 	single_Turn, (double)resolution, (double) real_time_angle*M_RAD_TO_DEG, crc);
+	return PX4_OK;
+}
+
+
+int ECoderReader::read_once() {
+	// const hrt_abstime cycle_timestamp = hrt_absolute_time();
+	int newBytes = 0;
+	newBytes = ::read(_rcs_fd, &_serial_buf[0], ECODER_BUFFER_SIZE);
+	if (newBytes <= 0) {
+		return PX4_ERROR;
+	}
+	_bytes_rx += newBytes;
+	// PX4_INFO_RAW("New bytes %d: ", newBytes);
 	// for (int i = 0; i<newBytes; i ++) {
 	// 	PX4_INFO_RAW("%d:%x ", i, _serial_buf[i]);
 	// }
 	// PX4_INFO_RAW("\n");
-	// PX4_INFO("ECoder %d, single_Turn :%d resolution %.1f Abs Angle: %.1f CRC %d", _reader_id,
-	// 	single_Turn, (double)resolution, (double) real_time_angle*M_RAD_TO_DEG, crc);
+	for (int i = 0; i<newBytes; i ++) {
+		if (data_buf_index < 0) {
+			if (_serial_buf[i] == commands[3]) {
+				data_buf_index = 0;
+				dataBuf[data_buf_index++] = _serial_buf[i];
+				//Then we need to check the next byte is 0x00
+				continue;
+			}
+			continue;
+		} else if (data_buf_index == 0) {
+			//Ensure 0 right after returned command
+			if (_serial_buf[i] != 0) {
+				data_buf_index = -1;
+			} else {
+				dataBuf[data_buf_index++] = _serial_buf[i];
+			}
+			continue;
+		} else if (data_buf_index > 0) {
+			dataBuf[data_buf_index++] = _serial_buf[i];
+			if (data_buf_index == ECODER_RES_FRAME_LEN) {
+				process_data();
+				data_buf_index = -1;
+			}
+		}
+
+	}
 	return PX4_OK;
 }
 
@@ -130,8 +159,7 @@ void ECoderReader::Run()
 	} else {
 		perf_begin(_cycle_perf);
 		ask();
-		usleep(60);
-		int32_t succ = read_once(_bytes_rx);
+		int32_t succ = read_once();
 		if (succ == PX4_OK) {
 			ecoder_ok = 1;
 		}
@@ -140,11 +168,12 @@ void ECoderReader::Run()
 }
 
 void ECoderReader::print_status() {
-	PX4_INFO("UART device%d: %s", _reader_id, _device);
-	PX4_INFO("UART RX bytes: %"  PRIu32, _bytes_rx);
+	PX4_INFO("ECODER:%d UART device: %s", _reader_id, _device);
+	PX4_INFO("UART RX bytes: %d freq %.1f", _bytes_rx, (double)real_time_freq);
 	PX4_INFO("ECoder %d: valid %d angle %4.1fdeg turns %d rpm %4.1f", _reader_id,
 		ecoder_ok, (double) (real_time_angle*M_RAD_TO_DEG_F), last_multi_turn, (double)real_time_rpm);
 	perf_print_counter(_cycle_perf);
+	perf_print_counter(_process_perf);
 }
 
 uint8_t CRC_C(uint8_t *CRCbuf, uint8_t* CRC_8X1,uint8_t Length)

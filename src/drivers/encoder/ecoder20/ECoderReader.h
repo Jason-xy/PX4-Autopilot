@@ -19,12 +19,14 @@ class ECoderReader : public px4::ScheduledWorkItem {
 	uint8_t _serial_write_buf[ECODER_WRITE_SIZE] {};
 	int _reader_id;
 	static uint8_t CRC8X1[CRC_TAB_SIZE];
-	uint8_t dataBuf[16] {0};
 	void Run() override;
 	perf_counter_t	_cycle_perf{0};
+	perf_counter_t	_process_perf{0};
 	bool _initialized{false};
 	uORB::Publication<sensor_motor_encoder_s>	_encoder_pub{ORB_ID(sensor_motor_encoder)};			/**< rate setpoint publication */
 	uint64_t last_ask_time{0};
+	uint64_t last_read_time{0};
+	float real_time_freq {0};
 	int32_t last_multi_turn{0};
 	uint64_t last_multi_turn_time{0};
 
@@ -33,9 +35,13 @@ class ECoderReader : public px4::ScheduledWorkItem {
 	float real_time_rpm {0};
 	uint32_t _bytes_rx {0};
 	sensor_motor_encoder_s data;
+	uint8_t dataBuf[16] {0};
+	int8_t data_buf_index = -1;
 
-	int read_once(uint32_t & new_bytes);
+
+	int read_once();
 	void ask();
+	int process_data();
 public:
 	int init();
 	ECoderReader(const char * module_name, int reader_id, const char *device);

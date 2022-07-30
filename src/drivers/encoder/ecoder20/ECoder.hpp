@@ -82,7 +82,7 @@ public:
 private:
 	bool _report_lock{true};
 
-	static constexpr unsigned	_current_update_interval{100}; // 10KHz
+	static constexpr unsigned	_current_update_interval{500}; // 2KHz
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1000000};
 
