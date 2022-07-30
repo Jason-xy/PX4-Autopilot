@@ -1,7 +1,7 @@
 {
-    "board_id": 42,
-    "magic": "JHEF405AIO",
-    "description": "Firmware for the JHEF405AIO board",
+    "board_id": 43,
+    "magic": "JHEF405AIOPRO",
+    "description": "Firmware for the JHEF405AIOPro board",
     "image": "",
     "build_time": 0,
     "summary": "PX4/JHEF405AIO",

@@ -2,7 +2,7 @@
 px4_add_board(
 	PLATFORM nuttx
 	VENDOR JHE
-	MODEL f405aio
+	MODEL f405aiopro
 	LABEL default
 	TOOLCHAIN arm-none-eabi
 	ARCHITECTURE cortex-m4
