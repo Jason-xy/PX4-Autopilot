@@ -61,7 +61,7 @@ PARAM_DEFINE_INT32(SL_DIR_0, 1);
  * @increment 1
  * @group Swashplate Mixer
  */
-PARAM_DEFINE_INT32(SL_DIR_1, 1);
+PARAM_DEFINE_INT32(SL_DIR_1, -1);
 
 /**
  * Swashplateless phase offset 0
@@ -88,3 +88,55 @@ PARAM_DEFINE_FLOAT(SL_PHASE_OFF_0, 0.0f);
  * @group Swashplate Mixer
  */
 PARAM_DEFINE_FLOAT(SL_PHASE_OFF_1, 0.0f);
+
+/**
+ * Swashplateless gain force
+ *
+ * Swashplateless gain for force, i.e..
+ *
+ * @min 0.0
+ * @max 10
+ * @decimal 3
+ * @increment 0.001
+ * @group Swashplate Mixer
+ */
+PARAM_DEFINE_FLOAT(SL_GAIN_FORCE, 1.0f);
+
+/**
+ * Swashplateless gain torque
+ *
+ * Swashplateless TPP gain for torque, i.e..
+ *
+ * @min 0.0
+ * @max 10
+ * @decimal 3
+ * @increment 0.001
+ * @group Swashplate Mixer
+ */
+PARAM_DEFINE_FLOAT(SL_GAIN_TORQUE, 0.1f);
+
+/**
+ * Swashplateless position of first motor
+ *
+ * Swashplateless  position of first motor. + is above
+ *
+ * @min -100
+ * @max 100.0
+ * @decimal 2
+ * @increment 0.1
+ * @group Swashplate Mixer
+ */
+PARAM_DEFINE_FLOAT(SL_PROP_POS_0, 0.05f);
+
+/**
+ * Swashplateless position of second motor
+ *
+ * Swashplateless  position of second motor. + is above
+ *
+ * @min -100
+ * @max 100.0
+ * @decimal 2
+ * @increment 0.1
+ * @group Swashplate Mixer
+ */
+PARAM_DEFINE_FLOAT(SL_PROP_POS_1, -0.05f);

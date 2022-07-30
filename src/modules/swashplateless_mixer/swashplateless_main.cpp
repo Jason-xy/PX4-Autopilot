@@ -31,7 +31,9 @@ SwashplatelessMixer::init()
 		PX4_ERR("sensor_motor_encoder callback registration failed!");
 		return false;
 	}
-
+	for (int i = 0; i < 8; i++) {
+		v_actuator_controls_output.control[i] = 0;
+	}
 	return true;
 }
 
@@ -41,6 +43,8 @@ SwashplatelessMixer::parameters_updated()
 	float amp = _param_sl_gain.get();
 	for (int i = 0; i < MAX_SL_MOTOR_NUM; i++) {
 		sl_mixer[i]->set_amp(amp);
+		sl_mixer[i]->set_amp_force(_param_gain_force.get());
+		sl_mixer[i]->set_amp_torque(_param_gain_torque.get());
 	}
 	calibration_offset[0] = _param_calib_0.get();
 	calibration_offset[1] = _param_calib_1.get();
@@ -48,6 +52,8 @@ SwashplatelessMixer::parameters_updated()
 	sl_mixer[1]->set_direction(_param_dir_1.get());
 	sl_mixer[0]->set_phrase_offset(_param_phase_offset_0.get());
 	sl_mixer[1]->set_phrase_offset(_param_phase_offset_1.get());
+	sl_mixer[0]->set_prop_pos(_param_prop_pos_0.get());
+	sl_mixer[1]->set_prop_pos(_param_prop_pos_1.get());
 }
 
 void SwashplatelessMixer::Run()
@@ -70,8 +76,23 @@ void SwashplatelessMixer::Run()
 		parameters_updated();
 	}
 
+	sensor_motor_encoder_s v_motor_enc;
 	if (_sensor_motor_encoder_sub.update(&v_motor_enc)) {
-		// PX4_INFO("Recv encoder!");
+		uint8_t motor_id = v_motor_enc.motor_id;
+		float calibed_angle = v_motor_enc.motor_abs_angle - calibration_offset[motor_id];
+		if (_actuators_sub.updated()) {
+			_actuators_sub.copy(&v_actuator_controls);
+		}
+		const Vector3f thrust{0, 0, v_actuator_controls.control[3]};
+		const Vector3f torque{v_actuator_controls.control[0], v_actuator_controls.control[1], v_actuator_controls.control[2]};
+		float output = sl_mixer[motor_id]->mix(calibed_angle, v_motor_enc.motor_rpm, thrust, torque);
+		v_actuator_controls_output.control[motor_id] = output;
+		v_actuator_controls_output.timestamp = hrt_absolute_time();
+		// sl_mixer[motor_id]->print_status();
+		// PX4_INFO("motor %d ctrl:%.1f ABS pos:%.1f caled %.1f rpm:%.1f actuator: %.2f %.2f %.2f %.2f",
+		// 	v_motor_enc.motor_id, (double) output, (double) (v_motor_enc.motor_abs_angle*M_RAD_TO_DEG_F),
+		// 	(double) (calibed_angle*M_RAD_TO_DEG_F), (double) v_motor_enc.motor_rpm, (double) v_actuator_controls.control[0],
+		// 	(double) v_actuator_controls.control[1], (double) v_actuator_controls.control[2], (double) v_actuator_controls.control[3]);
 	}
 
 	perf_end(_loop_perf);
@@ -103,6 +124,17 @@ int SwashplatelessMixer::task_spawn(int argc, char *argv[])
 int SwashplatelessMixer::custom_command(int argc, char *argv[])
 {
 	return print_usage("unknown command");
+}
+
+int SwashplatelessMixer::print_status()
+{
+	for (int i = 0; i < MAX_SL_MOTOR_NUM; i++) {
+		PX4_INFO("Mixer %d:", i);
+		sl_mixer[i]->print_status();
+	}
+	//Print loop perf
+	perf_print_counter(_loop_perf);
+	return 0;
 }
 
 int SwashplatelessMixer::print_usage(const char *reason)
