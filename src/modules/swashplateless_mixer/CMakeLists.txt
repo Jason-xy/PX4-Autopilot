@@ -34,11 +34,12 @@
 
 px4_add_module(
 	MODULE modules__swashplateless_mixer
-	MAIN swashplateless
+	MAIN swashplateless_mixer
 	COMPILE_FLAGS
 		${MAX_CUSTOM_OPT_LEVEL}
 	SRCS
 		swashplateless_main.cpp
+		SLMixer.cpp
 	DEPENDS
 		mathlib
 		px4_work_queue

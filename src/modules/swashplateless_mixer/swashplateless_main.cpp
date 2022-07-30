@@ -10,11 +10,17 @@ SwashplatelessMixer::SwashplatelessMixer() :
 	WorkItem(MODULE_NAME, px4::wq_configurations::nav_and_controllers),
 	_loop_perf(perf_alloc(PC_ELAPSED, MODULE_NAME": cycle"))
 {
+	for (int i = 0; i < MAX_SL_MOTOR_NUM; i++) {
+		sl_mixer[i] = new SLMixer();
+	}
 	parameters_updated();
 }
 
 SwashplatelessMixer::~SwashplatelessMixer()
 {
+	for (int i = 0; i < MAX_SL_MOTOR_NUM; i++) {
+		delete sl_mixer[i];
+	}
 	perf_free(_loop_perf);
 }
 
@@ -32,6 +38,16 @@ SwashplatelessMixer::init()
 void
 SwashplatelessMixer::parameters_updated()
 {
+	float amp = _param_sl_gain.get();
+	for (int i = 0; i < MAX_SL_MOTOR_NUM; i++) {
+		sl_mixer[i]->set_amp(amp);
+	}
+	calibration_offset[0] = _param_calib_0.get();
+	calibration_offset[1] = _param_calib_1.get();
+	sl_mixer[0]->set_direction(_param_dir_0.get());
+	sl_mixer[1]->set_direction(_param_dir_1.get());
+	sl_mixer[0]->set_phrase_offset(_param_phase_offset_0.get());
+	sl_mixer[1]->set_phrase_offset(_param_phase_offset_1.get());
 }
 
 void SwashplatelessMixer::Run()
@@ -109,7 +125,7 @@ Mixer for swashplateless helicoper
 	return 0;
 }
 
-int swashplateless_main(int argc, char *argv[])
+int swashplateless_mixer_main(int argc, char *argv[])
 {
 	return SwashplatelessMixer::main(argc, argv);
 }

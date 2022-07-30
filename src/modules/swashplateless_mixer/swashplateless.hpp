@@ -17,14 +17,16 @@
 #include <uORB/topics/sensor_motor_encoder.h>
 #include <vtol_att_control/vtol_type.h>
 #include <lib/ecl/AlphaFilter/AlphaFilter.hpp>
+#include "SLMixer.hpp"
 
-
+#define MAX_SL_MOTOR_NUM 2
 using namespace time_literals;
 
 /**
  * SwashplatelessMixer app start / stop handling function
  */
-extern "C" __EXPORT int swashplateless_main(int argc, char *argv[]);
+extern "C" __EXPORT int swashplateless_mixer_main(int argc, char *argv[]);
+
 
 class SwashplatelessMixer : public ModuleBase<SwashplatelessMixer>, public ModuleParams,
 	public px4::WorkItem
@@ -43,6 +45,8 @@ public:
 	static int print_usage(const char *reason = nullptr);
 
 	bool init();
+	SLMixer * sl_mixer[MAX_SL_MOTOR_NUM] = {nullptr};
+	float calibration_offset[MAX_SL_MOTOR_NUM] = {0};
 
 private:
 	void Run() override;
@@ -60,10 +64,14 @@ private:
 
 	perf_counter_t	_loop_perf;			/**< loop duration performance counter */
 
-	// DEFINE_PARAMETERS(
-	// 	(ParamFloat<px4::params::SL_GAIN>) _param_sl_gain,
-	// 	(ParamFloat<px4::params::SL_CALIB_0>) _param_calib_0,
-	// 	(ParamFloat<px4::params::SL_CALIB_1>) _param_calib_1,
-	// )
+	DEFINE_PARAMETERS(
+		(ParamFloat<px4::params::SL_GAIN>) _param_sl_gain,
+		(ParamFloat<px4::params::SL_CALIB_0>) _param_calib_0,
+		(ParamFloat<px4::params::SL_CALIB_1>) _param_calib_1,
+		(ParamFloat<px4::params::SL_PHASE_OFF_0>) _param_phase_offset_0,
+		(ParamFloat<px4::params::SL_PHASE_OFF_1>) _param_phase_offset_1,
+		(ParamInt<px4::params::SL_DIR_0>) _param_dir_0,
+		(ParamInt<px4::params::SL_DIR_1>) _param_dir_1
+	)
 };
 
