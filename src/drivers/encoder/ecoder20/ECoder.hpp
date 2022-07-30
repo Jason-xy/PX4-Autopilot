@@ -50,15 +50,14 @@
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionInterval.hpp>
 #include <uORB/topics/parameter_update.h>
+#include "ECoderReader.h"
 
-#define ECODER_BUFFER_SIZE 64
-#define ECODER_WRITE_SIZE 16
 
 class ECoder : public ModuleBase<ECoder>, public ModuleParams, public px4::ScheduledWorkItem
 {
 public:
 
-	ECoder(const char *device);
+	ECoder(const char *device0, const char * device1);
 	virtual ~ECoder();
 
 	/** @see ModuleBase */
@@ -75,9 +74,11 @@ public:
 
 	int	init();
 
-	int		_rcs_fd{-1};
-	char		_device[20] {};
 	int count_send = 0;
+	ECoderReader * reader0;
+	ECoderReader * reader1;
+	char		_device0[20] {};
+	char		_device1[20] {};
 private:
 
 	void Run() override;
@@ -88,9 +89,6 @@ private:
 	static constexpr unsigned	_current_update_interval{1000}; // 1000 Hz
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1000000};
-
-	uint8_t _serial_buf[ECODER_BUFFER_SIZE] {};
-	uint8_t _serial_write_buf[ECODER_WRITE_SIZE] {};
 
 	perf_counter_t	_cycle_perf;
 	perf_counter_t	_publish_interval_perf;

@@ -35,36 +35,19 @@
 #include <termios.h>
 #include <fcntl.h>
 
-static uint8_t commands[] {
-	0x02, //Read single turn position
-	0x8A, ///Read multi turn position
-	0x92, //Read precision
-	0x1A //Read single multi precision
-};
-// static char charCmd_Read_Single_Turn[]  { 0x02 };    //Read single turn positn
-// // static char charCmd_Read_Multi_Turn[]  { 0x8A };     //Read multi turn positn
-// // static char charCmd_Read_Res[]  { 0x92 };            //Read precision
-// // static char charCmd_Read_All[]  { 0x1A };            //Read single multi precision
-// // static char charCmd_Set_Single_To_Zero[]  { 0xC2 };  //single turn clear
-// // static char charCmd_Set_Multi_To_Zero[]  { 0x62 };   //Multi turn clear
-
-
-#define ECODER_BITRATE 2500000
 using namespace time_literals;
 
-uint8_t CRC_C(uint8_t *CRCbuf, uint8_t* CRC_8X1,uint8_t Length);
-void CRC_8X1_TAB_Creat(uint8_t *CRC_8X1);
-
-
-ECoder::ECoder(const char *device) :
+ECoder::ECoder(const char *device0, const char * device1) :
 	ModuleParams(nullptr),
-	ScheduledWorkItem(MODULE_NAME, px4::serial_port_to_wq(device)),
+	ScheduledWorkItem(MODULE_NAME, px4::serial_port_to_wq(device0)),
 	_cycle_perf(perf_alloc(PC_ELAPSED, MODULE_NAME": cycle time")),
 	_publish_interval_perf(perf_alloc(PC_INTERVAL, MODULE_NAME": publish interval"))
 {
-	if (device) {
-		strncpy(_device, device, sizeof(_device) - 1);
-		_device[sizeof(_device) - 1] = '\0';
+	if (device0) {
+		reader0 = new ECoderReader(0, device0);
+	}
+	if (device1) {
+		reader1 = new ECoderReader(1, device1);
 	}
 }
 
@@ -77,22 +60,14 @@ ECoder::~ECoder()
 int
 ECoder::init()
 {
-	_rcs_fd = open(_device, O_RDWR | O_NONBLOCK);
-	struct termios t;
-	tcgetattr(_rcs_fd, &t);
-	t.c_cflag &= ~(CSIZE | PARENB | CSTOPB | CRTSCTS);
-	t.c_cflag |= (CS8);
-	cfsetspeed(&t, ECODER_BITRATE);
-	tcsetattr(_rcs_fd, TCSANOW, &t);
-
-	int termios_state = tcsetattr(_rcs_fd, TCSANOW, &t);
-	if (termios_state < 0) {
-		PX4_ERR("Opening device %s for ecoder with 2.5Mbps failed", _device);
-		return -1;
-	} else {
-		PX4_INFO("Succ opened device %s for ecoder with 2.5Mbps", _device);
-		return 0;
+	int ret = 0;
+	if (reader0) {
+		ret = reader0->init();
 	}
+	if (reader1) {
+		ret += reader1->init();
+	}
+	return ret;
 }
 
 int
@@ -103,12 +78,12 @@ ECoder::task_spawn(int argc, char *argv[])
 	int myoptind = 1;
 	int ch;
 	const char *myoptarg = nullptr;
-	const char *device = nullptr;
+	const char *device0 = nullptr;
 
 	while ((ch = px4_getopt(argc, argv, "d:", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
 		case 'd':
-			device = myoptarg;
+			device0 = myoptarg;
 			break;
 
 		case '?':
@@ -126,12 +101,12 @@ ECoder::task_spawn(int argc, char *argv[])
 		return -1;
 	}
 
-	if (device == nullptr) {
+	if (device0 == nullptr) {
 		PX4_ERR("valid device required");
 		return PX4_ERROR;
 	}
 
-	ECoder *instance = new ECoder(device);
+	ECoder *instance = new ECoder(device0, nullptr);
 
 	if (instance == nullptr) {
 		PX4_ERR("alloc failed");
@@ -169,33 +144,25 @@ void ECoder::Run()
 
 			updateParams();
 		}
-		::write(_rcs_fd, &commands[3], 1);
-		// const hrt_abstime cycle_timestamp = hrt_absolute_time();
-		int newBytes = 0;
-		usleep(50);
-		newBytes = ::read(_rcs_fd, &_serial_buf[0], ECODER_BUFFER_SIZE);
-		if (newBytes > 0) {
-			int start_byte=0;
-			if (newBytes == 10) {
-				//Currently it jumps the second zero byte.
-				start_byte = 0;
-			} else {
-				return;
-			}
-			int32_t single_Turn = _serial_buf[start_byte + 1] | _serial_buf[start_byte + 2] << 8
-				| _serial_buf[start_byte + 3] << 16;
-			float resolution = (float) (1<<_serial_buf[start_byte + 4]);
-			float abs_angle = (float)single_Turn/resolution*M_TWOPI_F;
-			// PX4_INFO_RAW("New bytes %d:", newBytes);
-			// for (int i = 0; i<newBytes; i ++) {
-			// 	PX4_INFO_RAW("%d:%x ", i, _serial_buf[i]);
-			// }
-			// PX4_INFO_RAW("\n");
-			PX4_INFO("single_Turn :%d resolution %.1f Abs Angle: %.1f", single_Turn, (double)resolution,
-				(double) abs_angle*M_RAD_TO_DEG);
+
+		if (reader0) {
+			reader0->ask();
 		}
-		if (newBytes > 0) {
-			_bytes_rx += newBytes;
+		if (reader1) {
+			reader1->ask();
+		}
+		usleep(50);
+		if (reader0) {
+			int32_t succ = reader0->read_once(_bytes_rx);
+			if (succ) {
+				PX4_INFO("Succ");
+			}
+		}
+		if (reader1) {
+			int32_t succ = reader1->read_once(_bytes_rx);
+			if (succ) {
+				PX4_INFO("Succ");
+			}
 		}
 		count_send += 1;
 	}
@@ -210,11 +177,13 @@ int ECoder::print_status()
 {
 	PX4_INFO("Max update rate: %u Hz", 1000000 / _current_update_interval);
 
-	if (_device[0] != '\0') {
-		PX4_INFO("UART device: %s", _device);
-		PX4_INFO("UART RX bytes: %"  PRIu32, _bytes_rx);
+	if (_device0[0] != '\0') {
+		PX4_INFO("UART device0: %s", _device0);
 	}
-
+	if (_device1[0] != '\0') {
+		PX4_INFO("UART device1: %s", _device1);
+	}
+	PX4_INFO("UART RX bytes: %"  PRIu32, _bytes_rx);
 	perf_print_counter(_cycle_perf);
 	perf_print_counter(_publish_interval_perf);
 	return 0;
@@ -244,40 +213,4 @@ Encoder
 extern "C" __EXPORT int ecoder_main(int argc, char *argv[])
 {
 	return ECoder::main(argc, argv);
-}
-
-uint8_t CRC_C(uint8_t *CRCbuf, uint8_t* CRC_8X1,uint8_t Length)
-{
-	uint8_t CRCResult=0;
-	uint8_t CRCLength=0;
-	while(CRCLength<Length)
-	{
-		CRCResult ^= CRCbuf[CRCLength];
-		CRCResult = (CRCResult&0x00ff);
-		CRCLength++;
-		CRCResult = CRC_8X1[CRCResult];
-	}
-	return CRCResult;
-}
-
-void CRC_8X1_TAB_Creat(uint8_t *CRC_8X1)
-{
-	uint16_t i,j;
-	uint8_t CRCResult;
-	for(j = 0;j < 256;j++)
-	{
-		CRCResult = j;
-		for(i = 0;i < 8;i++)
-		{
-			if(CRCResult & 0x80)
-		{
-			CRCResult = (CRCResult << 1) ^ 0x01; //0x01--x^8+1
-		}
-		else
-		{
-			CRCResult <<= 1;
-		}
-		}
-		CRC_8X1[j] = (CRCResult&0x00ff);
-	}
 }

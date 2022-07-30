@@ -36,6 +36,7 @@ px4_add_module(
 	COMPILE_FLAGS
 	SRCS
 		ECoder.cpp
+		ECoderReader.cpp
 	MODULE_CONFIG
 		module.yaml
 	)
