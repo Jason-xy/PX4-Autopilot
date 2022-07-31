@@ -14,7 +14,7 @@ float SLMixer::mix(float calibed_angle, float rpm, const Vector3f & thrust, cons
 	target_thrust = thrust;
 	target_torque = torque;
 	motor_angle = calibed_angle;
-	float thrust_z = math::max(thrust(2), 0.1f);
+	float thrust_z = math::max(thrust(2), 0.05f);
 	n_x = -torque(1)*_amp_torque/_prop_pos + thrust(0)*_amp_force/thrust_z;
 	n_y = torque(0)*_amp_torque/_prop_pos + thrust(1)*_amp_force/thrust_z;
 	cyclic_pharse = atan2f(n_x, n_y);

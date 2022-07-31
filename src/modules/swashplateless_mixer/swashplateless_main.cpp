@@ -7,7 +7,7 @@ using namespace matrix;
 
 SwashplatelessMixer::SwashplatelessMixer() :
 	ModuleParams(nullptr),
-	WorkItem(MODULE_NAME, px4::wq_configurations::nav_and_controllers),
+	WorkItem(MODULE_NAME, px4::wq_configurations::sl_mixer),
 	_loop_perf(perf_alloc(PC_ELAPSED, MODULE_NAME": cycle"))
 {
 	for (int i = 0; i < MAX_SL_MOTOR_NUM; i++) {
@@ -79,6 +79,13 @@ void SwashplatelessMixer::Run()
 
 	sensor_motor_encoder_s v_motor_enc;
 	if (_sensor_motor_encoder_sub.update(&v_motor_enc)) {
+		uint64_t ts = hrt_absolute_time();
+		if (first_mix_time == 0) {
+			first_mix_time = ts;
+		} else {
+			mix_freq = (float)mix_count/(float)(ts - first_mix_time)*1000000.0f;
+		}
+
 		uint8_t motor_id = v_motor_enc.motor_id;
 		float calibed_angle = v_motor_enc.motor_abs_angle - calibration_offset[motor_id];
 		if (_actuators_sub.updated()) {
@@ -107,8 +114,9 @@ void SwashplatelessMixer::Run()
 		}
 		float output = sl_mixer[motor_id]->mix(calibed_angle, v_motor_enc.motor_rpm, thrust, torque);
 		v_actuator_controls_output.control[motor_id] = output;
-		v_actuator_controls_output.timestamp = hrt_absolute_time();
+		v_actuator_controls_output.timestamp = ts;
 		_actuators_pub.publish(v_actuator_controls_output);
+		mix_count += 1;
 		// sl_mixer[motor_id]->print_status();
 		// PX4_INFO("motor %d ctrl:%.1f ABS pos:%.1f caled %.1f rpm:%.1f actuator: %.2f %.2f %.2f %.2f",
 		// 	v_motor_enc.motor_id, (double) output, (double) (v_motor_enc.motor_abs_angle*M_RAD_TO_DEG_F),
@@ -149,6 +157,7 @@ int SwashplatelessMixer::custom_command(int argc, char *argv[])
 
 int SwashplatelessMixer::print_status()
 {
+	PX4_INFO("SwashplatelessMixer total freq %.1f", (double) mix_freq);
 	for (int i = 0; i < MAX_SL_MOTOR_NUM; i++) {
 		PX4_INFO("Mixer %d:", i);
 		sl_mixer[i]->print_status();

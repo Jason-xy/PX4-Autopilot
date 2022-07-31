@@ -67,6 +67,9 @@ private:
 	actuator_controls_s v_actuator_controls{};
 	actuator_controls_s v_actuator_controls_output{};
 	manual_control_setpoint_s _manual_control_setpoint{};
+	uint64_t first_mix_time {0};
+	int64_t mix_count {0};
+	float mix_freq {0};
 
 	perf_counter_t	_loop_perf;			/**< loop duration performance counter */
 	enum DebugMode {
