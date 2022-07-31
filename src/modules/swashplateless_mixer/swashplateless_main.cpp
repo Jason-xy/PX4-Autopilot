@@ -46,8 +46,8 @@ SwashplatelessMixer::parameters_updated()
 		sl_mixer[i]->set_amp_force(_param_gain_force.get());
 		sl_mixer[i]->set_amp_torque(_param_gain_torque.get());
 	}
-	calibration_offset[0] = _param_calib_0.get();
-	calibration_offset[1] = _param_calib_1.get();
+	calibration_offset[0] = _param_calib_0.get()*M_DEG_TO_RAD_F;
+	calibration_offset[1] = _param_calib_1.get()*M_DEG_TO_RAD_F;
 	sl_mixer[0]->set_direction(_param_dir_0.get());
 	sl_mixer[1]->set_direction(_param_dir_1.get());
 	sl_mixer[0]->set_phrase_offset(_param_phase_offset_0.get());
