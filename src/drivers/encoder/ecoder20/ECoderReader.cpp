@@ -15,9 +15,16 @@ static uint8_t commands[] {
 uint8_t ECoderReader::CRC8X1[CRC_TAB_SIZE];
 uint8_t CRC_C(uint8_t *CRCbuf, uint8_t* CRC_8X1,uint8_t Length);
 void CRC_8X1_TAB_Creat(uint8_t *CRC_8X1);
+const px4::wq_config_t getEncoderWqConfig(int reader_id) {
+	if (reader_id == 0) {
+		return px4::wq_configurations::motor_encoder0;
+	} else {
+		return px4::wq_configurations::motor_encoder1;
+	}
+}
 
 ECoderReader::ECoderReader(const char * module_name, int reader_id, const char *device):
-	ScheduledWorkItem(module_name, px4::serial_port_to_wq(device)),
+	ScheduledWorkItem(module_name, getEncoderWqConfig(reader_id)),
 	_reader_id(reader_id),
 	_cycle_perf(perf_alloc(PC_INTERVAL, module_name)),
 	_process_perf(perf_alloc(PC_ELAPSED, "Ecoder::ProcessData")) {
@@ -91,14 +98,14 @@ int ECoderReader::process_data() {
 	data.motor_id = _reader_id;
 	data.motor_rpm = real_time_rpm;
 	data.motor_abs_angle = real_time_angle;
-	data.multi_turns = last_multi_turn;
+	// data.multi_turns = last_multi_turn;
 	_encoder_pub.publish(data);
 	uint64_t time = hrt_absolute_time();
-	real_time_freq = real_time_freq*0.9f + 0.1f / ((float)(time - last_read_time) / 1000000.0f);
-	last_read_time = time;
+	num_msgs++;
+	real_time_freq = (float)num_msgs/(float)(time - first_read_time)*1000000.0f;
+	if (first_read_time == 0)
+		first_read_time = time;
 	perf_end(_process_perf);
-	// PX4_INFO("ECoder %d, single_Turn :%d resolution %.1f Abs Angle: %.1f CRC %d", _reader_id,
-	// 	single_Turn, (double)resolution, (double) real_time_angle*M_RAD_TO_DEG, crc);
 	return PX4_OK;
 }
 

@@ -65,6 +65,9 @@ static constexpr wq_config_t I2C2{"wq:I2C2", 2336, -10};
 static constexpr wq_config_t I2C3{"wq:I2C3", 2336, -11};
 static constexpr wq_config_t I2C4{"wq:I2C4", 2336, -12};
 
+static constexpr wq_config_t motor_encoder0{"wq:ECoder0", 2240, -12}; //Encoder 0 is the high priority as sensor
+static constexpr wq_config_t motor_encoder1{"wq:ECoder1", 2240, -12}; //Encoder 1 is the high priority as sensor
+
 // PX4 att/pos controllers, highest priority after sensors.
 static constexpr wq_config_t nav_and_controllers{"wq:nav_and_controllers", 2240, -13};
 

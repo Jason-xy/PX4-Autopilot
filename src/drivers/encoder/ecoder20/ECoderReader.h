@@ -25,7 +25,8 @@ class ECoderReader : public px4::ScheduledWorkItem {
 	bool _initialized{false};
 	uORB::Publication<sensor_motor_encoder_s>	_encoder_pub{ORB_ID(sensor_motor_encoder)};			/**< rate setpoint publication */
 	uint64_t last_ask_time{0};
-	uint64_t last_read_time{0};
+	uint64_t first_read_time{0};
+	int32_t num_msgs{0};
 	float real_time_freq {0};
 	int32_t last_multi_turn{0};
 	uint64_t last_multi_turn_time{0};
