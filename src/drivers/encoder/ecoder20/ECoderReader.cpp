@@ -35,7 +35,7 @@ ECoderReader::~ECoderReader() {
 }
 
 int ECoderReader::init() {
-	_rcs_fd = open(_device, O_RDWR | O_NONBLOCK);
+	_rcs_fd = open(_device, O_RDWR | O_NOCTTY | O_NONBLOCK|O_DIRECT);
 	struct termios t;
 	tcgetattr(_rcs_fd, &t);
 	t.c_cflag &= ~(CSIZE | PARENB | CSTOPB | CRTSCTS);
@@ -140,7 +140,6 @@ int ECoderReader::read_once() {
 				data_buf_index = -1;
 			}
 		}
-
 	}
 	return PX4_OK;
 }
