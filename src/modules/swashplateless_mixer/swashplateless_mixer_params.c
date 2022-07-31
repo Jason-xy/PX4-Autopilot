@@ -140,3 +140,24 @@ PARAM_DEFINE_FLOAT(SL_PROP_POS_0, 0.05f);
  * @group Swashplate Mixer
  */
 PARAM_DEFINE_FLOAT(SL_PROP_POS_1, -0.05f);
+
+
+/**
+ * Swashplateless Debug mode
+ *
+ * Swashplateless  debug 0 is disable, 1 is input from RC, 2 is fixed torque on roll, 3 is fixed torque on pitch
+ * DEBUG_DISABLE
+ * 		Disable Debug Mode
+ * DEBUG_PASSTHROUGH_RC
+ * 		Passthrough from RC
+ * DEBUG_ROLL_TORQUE
+ * 		Fix torque on roll
+ * DEBUG_PITCH_TORQUE
+ * 		Fix torque on pitch
+ * @value 0 Disable Debug
+ * @value 1 Passthrough from RC
+ * @value 2 Fix torque on roll
+ * @value 3 Fix torque on pitch
+ * @group Swashplate Mixer
+ */
+PARAM_DEFINE_INT32(SL_DEBUG_MOD, 0);

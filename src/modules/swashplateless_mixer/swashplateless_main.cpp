@@ -54,6 +54,7 @@ SwashplatelessMixer::parameters_updated()
 	sl_mixer[1]->set_phrase_offset(_param_phase_offset_1.get());
 	sl_mixer[0]->set_prop_pos(_param_prop_pos_0.get());
 	sl_mixer[1]->set_prop_pos(_param_prop_pos_1.get());
+	_debug_mode = (DebugMode) _param_debug_mode.get();
 }
 
 void SwashplatelessMixer::Run()
@@ -83,8 +84,27 @@ void SwashplatelessMixer::Run()
 		if (_actuators_sub.updated()) {
 			_actuators_sub.copy(&v_actuator_controls);
 		}
-		const Vector3f thrust{0, 0, v_actuator_controls.control[3]};
-		const Vector3f torque{v_actuator_controls.control[0], v_actuator_controls.control[1], v_actuator_controls.control[2]};
+		if (_manual_control_setpoint_sub.updated()) {
+			_manual_control_setpoint_sub.copy(&_manual_control_setpoint);
+		}
+		Vector3f thrust{0, 0, v_actuator_controls.control[3]};
+		Vector3f torque{v_actuator_controls.control[0], v_actuator_controls.control[1], v_actuator_controls.control[2]};
+		if (_debug_mode > DEBUG_DISABLE) {
+			if (_debug_mode == DEBUG_PASSTHROUGH_RC) {
+				thrust(2) = math::constrain(_manual_control_setpoint.z, 0.0f, 1.0f);
+				torque(0) = math::constrain(_manual_control_setpoint.x, -1.0f, 1.0f);
+				torque(1) = math::constrain(_manual_control_setpoint.y, -1.0f, 1.0f);
+				torque(2) = math::constrain(_manual_control_setpoint.r, -1.0f, 1.0f);
+			} else if (_debug_mode == DEBUG_ROLL_TORQUE) {
+				torque(0) = 1.0;
+				torque(1) = 0.0;
+				torque(2) = 0.0;
+			} if (_debug_mode == DEBUG_PITCH_TORQUE) {
+				torque(0) = 0.0;
+				torque(1) = 1.0;
+				torque(2) = 0.0;
+			}
+		}
 		float output = sl_mixer[motor_id]->mix(calibed_angle, v_motor_enc.motor_rpm, thrust, torque);
 		v_actuator_controls_output.control[motor_id] = output;
 		v_actuator_controls_output.timestamp = hrt_absolute_time();

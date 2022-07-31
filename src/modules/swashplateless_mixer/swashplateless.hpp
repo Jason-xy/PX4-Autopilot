@@ -26,7 +26,6 @@ using namespace time_literals;
  */
 extern "C" __EXPORT int swashplateless_mixer_main(int argc, char *argv[]);
 
-
 class SwashplatelessMixer : public ModuleBase<SwashplatelessMixer>, public ModuleParams,
 	public px4::WorkItem
 {
@@ -65,10 +64,18 @@ private:
 
 	uORB::Publication<actuator_controls_s>		_actuators_pub{ORB_ID(actuator_controls_5)}; //Publish to group 2, and pass mixer run on group 5
 
-	actuator_controls_s v_actuator_controls;
-	actuator_controls_s v_actuator_controls_output;
+	actuator_controls_s v_actuator_controls{};
+	actuator_controls_s v_actuator_controls_output{};
+	manual_control_setpoint_s _manual_control_setpoint{};
 
 	perf_counter_t	_loop_perf;			/**< loop duration performance counter */
+	enum DebugMode {
+		DEBUG_DISABLE,
+		DEBUG_PASSTHROUGH_RC,
+		DEBUG_ROLL_TORQUE,
+		DEBUG_PITCH_TORQUE
+	} _debug_mode;
+
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::SL_GAIN>) _param_sl_gain,
@@ -81,7 +88,8 @@ private:
 		(ParamFloat<px4::params::SL_GAIN_FORCE>) _param_gain_force,
 		(ParamFloat<px4::params::SL_GAIN_TORQUE>) _param_gain_torque,
 		(ParamFloat<px4::params::SL_PROP_POS_0>) _param_prop_pos_0,
-		(ParamFloat<px4::params::SL_PROP_POS_1>) _param_prop_pos_1
+		(ParamFloat<px4::params::SL_PROP_POS_1>) _param_prop_pos_1,
+		(ParamInt<px4::params::SL_DEBUG_MOD>) _param_debug_mode
 	)
 };
 
