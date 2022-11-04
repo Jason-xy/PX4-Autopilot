@@ -641,7 +641,7 @@ void RCInput::Run()
 
 			} else {
 				// Scan the next protocol
-				set_rc_scan_state(RC_SCAN_GHST);
+				set_rc_scan_state(RC_SCAN_SBUS); //Jump the useless GHST
 			}
 
 			break;
