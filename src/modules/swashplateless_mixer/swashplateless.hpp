@@ -73,10 +73,11 @@ private:
 
 	perf_counter_t	_loop_perf;			/**< loop duration performance counter */
 	enum DebugMode {
-		DEBUG_DISABLE,
-		DEBUG_PASSTHROUGH_RC,
-		DEBUG_ROLL_TORQUE,
-		DEBUG_PITCH_TORQUE
+		DEBUG_DISABLE = 0,
+		DEBUG_PASSTHROUGH_RC = 1,
+		DEBUG_ROLL_TORQUE = 2,
+		DEBUG_PITCH_TORQUE = 3,
+		DEBUG_THRUST_ONLY = 4
 	} _debug_mode;
 
 

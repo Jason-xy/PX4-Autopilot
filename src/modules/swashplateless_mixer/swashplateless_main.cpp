@@ -113,6 +113,9 @@ void SwashplatelessMixer::Run()
 			}
 		}
 		float output = sl_mixer[motor_id]->mix(calibed_angle, v_motor_enc.motor_rpm, thrust, torque);
+		if (_debug_mode == DEBUG_THRUST_ONLY) {
+		    output = math::constrain(_manual_control_setpoint.z, 0.0f, 1.0f);
+		}
 		v_actuator_controls_output.control[motor_id] = output;
 		v_actuator_controls_output.timestamp = ts;
 		_actuators_pub.publish(v_actuator_controls_output);
@@ -122,6 +125,18 @@ void SwashplatelessMixer::Run()
 		// 	v_motor_enc.motor_id, (double) output, (double) (v_motor_enc.motor_abs_angle*M_RAD_TO_DEG_F),
 		// 	(double) (calibed_angle*M_RAD_TO_DEG_F), (double) v_motor_enc.motor_rpm, (double) v_actuator_controls.control[0],
 		// 	(double) v_actuator_controls.control[1], (double) v_actuator_controls.control[2], (double) v_actuator_controls.control[3]);
+	} else {
+        if (_debug_mode == DEBUG_THRUST_ONLY) {
+            if (_manual_control_setpoint_sub.updated()) {
+                _manual_control_setpoint_sub.copy(&_manual_control_setpoint);
+            }
+            float output = math::constrain(_manual_control_setpoint.z, 0.0f, 1.0f);
+            v_actuator_controls_output.control[0] = output;
+            v_actuator_controls_output.control[1] = output;
+            uint64_t ts = hrt_absolute_time();
+            v_actuator_controls_output.timestamp = ts;
+            _actuators_pub.publish(v_actuator_controls_output);
+        }
 	}
 
 	perf_end(_loop_perf);
