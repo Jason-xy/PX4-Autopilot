@@ -41,6 +41,8 @@
 #include <uORB/topics/vehicle_air_data.h>
 #include <uORB/topics/vehicle_imu.h>
 #include <uORB/topics/vehicle_magnetometer.h>
+#include <uORB/topics/vehicle_acceleration.h>
+#include <uORB/topics/vehicle_angular_velocity.h>
 
 using matrix::Vector3f;
 
@@ -63,137 +65,91 @@ public:
 private:
 	explicit MavlinkStreamHighresIMU(Mavlink *mavlink) : MavlinkStream(mavlink) {}
 
-	uORB::SubscriptionMultiArray<vehicle_imu_s, 3> _vehicle_imu_subs{ORB_ID::vehicle_imu};
-	uORB::Subscription _estimator_sensor_bias_sub{ORB_ID(estimator_sensor_bias)};
-	uORB::Subscription _estimator_selector_status_sub{ORB_ID(estimator_selector_status)};
+	// uORB::SubscriptionMultiArray<vehicle_imu_s, 3> _vehicle_imu_subs{ORB_ID::vehicle_imu};
+	// uORB::Subscription _estimator_sensor_bias_sub{ORB_ID(estimator_sensor_bias)};
+	// uORB::Subscription _estimator_selector_status_sub{ORB_ID(estimator_selector_status)};
 	uORB::Subscription _sensor_selection_sub{ORB_ID(sensor_selection)};
 	uORB::Subscription _differential_pressure_sub{ORB_ID(differential_pressure)};
 	uORB::Subscription _magnetometer_sub{ORB_ID(vehicle_magnetometer)};
 	uORB::Subscription _air_data_sub{ORB_ID(vehicle_air_data)};
+	uORB::Subscription _angular_velocity_sub{ORB_ID(vehicle_angular_velocity)};
+	uORB::Subscription _acceleration_sub{ORB_ID(vehicle_acceleration)};
+
+	bool updated_ang_vel = false;
+	bool updated_acc = false;
+	vehicle_acceleration_s ang_vel;
+	vehicle_angular_velocity_s acc;
 
 	bool send() override
 	{
-		bool updated = false;
-
-		sensor_selection_s sensor_selection{};
-		_sensor_selection_sub.copy(&sensor_selection);
-
-		vehicle_imu_s imu;
-
-		for (auto &imu_sub : _vehicle_imu_subs) {
-			if (imu_sub.update(&imu)) {
-				if (imu.accel_device_id == sensor_selection.accel_device_id) {
-					updated = true;
-					break;
-				}
-			}
+		if (_angular_velocity_sub.update(&ang_vel)) {
+			updated_ang_vel = true;
 		}
-
-		if (updated) {
+		if (_acceleration_sub.update(&acc)) {
+			updated_acc = true;
+		}
+		if (updated_ang_vel || updated_acc) {
+			updated_ang_vel = false;
+			updated_acc = false;
 			uint16_t fields_updated = 0;
 
 			fields_updated |= (1 << 0) | (1 << 1) | (1 << 2); // accel
 			fields_updated |= (1 << 3) | (1 << 4) | (1 << 5); // gyro
 
-			vehicle_magnetometer_s magnetometer{};
+			// vehicle_magnetometer_s magnetometer{};
 
-			if (_magnetometer_sub.update(&magnetometer)) {
-				// mark third group dimensions as changed
-				fields_updated |= (1 << 6) | (1 << 7) | (1 << 8);
+			// if (_magnetometer_sub.update(&magnetometer)) {
+			// 	// mark third group dimensions as changed
+			// 	fields_updated |= (1 << 6) | (1 << 7) | (1 << 8);
 
-			} else {
-				_magnetometer_sub.copy(&magnetometer);
-			}
+			// } else {
+			// 	_magnetometer_sub.copy(&magnetometer);
+			// }
 
-			// find corresponding estimated sensor bias
-			if (_estimator_selector_status_sub.updated()) {
-				estimator_selector_status_s estimator_selector_status;
+			// Vector3f mag_bias{0.f, 0.f, 0.f};
 
-				if (_estimator_selector_status_sub.copy(&estimator_selector_status)) {
-					_estimator_sensor_bias_sub.ChangeInstance(estimator_selector_status.primary_instance);
-				}
-			}
+			// const Vector3f mag = Vector3f{magnetometer.magnetometer_ga} - mag_bias;
 
-			Vector3f accel_bias{0.f, 0.f, 0.f};
-			Vector3f gyro_bias{0.f, 0.f, 0.f};
-			Vector3f mag_bias{0.f, 0.f, 0.f};
+			// vehicle_air_data_s air_data{};
 
-			{
-				estimator_sensor_bias_s bias;
+			// if (_air_data_sub.update(&air_data)) {
+			// 	/* mark fourth group (baro fields) dimensions as changed */
+			// 	fields_updated |= (1 << 9) | (1 << 11) | (1 << 12);
 
-				if (_estimator_sensor_bias_sub.copy(&bias)) {
-					if ((bias.accel_device_id != 0) && (bias.accel_device_id == imu.accel_device_id)) {
-						accel_bias = Vector3f{bias.accel_bias};
-					}
+			// } else {
+			// 	_air_data_sub.copy(&air_data);
+			// }
 
-					if ((bias.gyro_device_id != 0) && (bias.gyro_device_id == imu.gyro_device_id)) {
-						gyro_bias = Vector3f{bias.gyro_bias};
-					}
+			// differential_pressure_s differential_pressure{};
 
-					if ((bias.mag_device_id != 0) && (bias.mag_device_id == magnetometer.device_id)) {
-						mag_bias = Vector3f{bias.mag_bias};
+			// if (_differential_pressure_sub.update(&differential_pressure)) {
+			// 	/* mark fourth group (dpres field) dimensions as changed */
+			// 	fields_updated |= (1 << 10);
 
-					} else {
-						// find primary mag
-						uORB::SubscriptionMultiArray<vehicle_magnetometer_s> mag_subs{ORB_ID::vehicle_magnetometer};
+			// } else {
+			// 	_differential_pressure_sub.copy(&differential_pressure);
+			// }
 
-						for (int i = 0; i < mag_subs.size(); i++) {
-							if (mag_subs[i].advertised() && mag_subs[i].copy(&magnetometer)) {
-								if (magnetometer.device_id == bias.mag_device_id) {
-									_magnetometer_sub.ChangeInstance(i);
-									break;
-								}
-							}
+			const Vector3f accel{acc.xyz};
 
-						}
-					}
-				}
-			}
-
-			const Vector3f mag = Vector3f{magnetometer.magnetometer_ga} - mag_bias;
-
-			vehicle_air_data_s air_data{};
-
-			if (_air_data_sub.update(&air_data)) {
-				/* mark fourth group (baro fields) dimensions as changed */
-				fields_updated |= (1 << 9) | (1 << 11) | (1 << 12);
-
-			} else {
-				_air_data_sub.copy(&air_data);
-			}
-
-			differential_pressure_s differential_pressure{};
-
-			if (_differential_pressure_sub.update(&differential_pressure)) {
-				/* mark fourth group (dpres field) dimensions as changed */
-				fields_updated |= (1 << 10);
-
-			} else {
-				_differential_pressure_sub.copy(&differential_pressure);
-			}
-
-			const float accel_dt_inv = 1.e6f / (float)imu.delta_velocity_dt;
-			const Vector3f accel = (Vector3f{imu.delta_velocity} * accel_dt_inv) - accel_bias;
-
-			const float gyro_dt_inv = 1.e6f / (float)imu.delta_angle_dt;
-			const Vector3f gyro = (Vector3f{imu.delta_angle} * gyro_dt_inv) - gyro_bias;
+			const Vector3f gyro{ang_vel.xyz};
 
 			mavlink_highres_imu_t msg{};
 
-			msg.time_usec = imu.timestamp_sample;
+			msg.time_usec = ang_vel.timestamp_sample;
 			msg.xacc = accel(0);
 			msg.yacc = accel(1);
 			msg.zacc = accel(2);
 			msg.xgyro = gyro(0);
 			msg.ygyro = gyro(1);
 			msg.zgyro = gyro(2);
-			msg.xmag = mag(0);
-			msg.ymag = mag(1);
-			msg.zmag = mag(2);
-			msg.abs_pressure = air_data.baro_pressure_pa;
-			msg.diff_pressure = differential_pressure.differential_pressure_raw_pa;
-			msg.pressure_alt = air_data.baro_alt_meter;
-			msg.temperature = air_data.baro_temp_celcius;
+			// msg.xmag = mag(0);
+			// msg.ymag = mag(1);
+			// msg.zmag = mag(2);
+			// msg.abs_pressure = air_data.baro_pressure_pa;
+			// msg.diff_pressure = differential_pressure.differential_pressure_raw_pa;
+			// msg.pressure_alt = air_data.baro_alt_meter;
+			// msg.temperature = air_data.baro_temp_celcius;
 			msg.fields_updated = fields_updated;
 
 			mavlink_msg_highres_imu_send_struct(_mavlink->get_channel(), &msg);

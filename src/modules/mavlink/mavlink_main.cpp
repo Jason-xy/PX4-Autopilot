@@ -1628,7 +1628,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		break;
 
 	case MAVLINK_MODE_EXTVISION:
-		configure_stream_local("HIGHRES_IMU", unlimited_rate);		// for VIO
+		configure_stream_local("HIGHRES_IMU", 200.0f);		// for VIO
 
 	// FALLTHROUGH
 	case MAVLINK_MODE_EXTVISIONMIN:
