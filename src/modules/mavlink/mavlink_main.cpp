@@ -2244,7 +2244,7 @@ Mavlink::task_main(int argc, char *argv[])
 
 	while (!_task_should_exit) {
 		/* main loop */
-		px4_usleep(_main_loop_delay);
+		px4_usleep(200);
 
 		if (!should_transmit()) {
 			check_requested_subscriptions();
@@ -2403,7 +2403,7 @@ Mavlink::task_main(int argc, char *argv[])
 			}
 		}
 
-		check_requested_subscriptions();
+		// check_requested_subscriptions();
 
 		/* update streams */
 		for (const auto &stream : _streams) {
