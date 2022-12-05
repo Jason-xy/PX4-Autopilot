@@ -2210,6 +2210,11 @@ Mavlink::task_main(int argc, char *argv[])
 		_main_loop_delay = MAVLINK_MAX_INTERVAL;
 	}
 
+	if (_mode == MAVLINK_MODE_EXTVISION) {
+		/* set main loop delay to 1 second for the IRIDIUM mode */
+		_main_loop_delay = 200;
+	}
+
 	/* open the UART device after setting the instance, as it might block */
 	if (get_protocol() == Protocol::SERIAL) {
 		_uart_fd = mavlink_open_uart(_baudrate, _device_name, _flow_control);
@@ -2244,7 +2249,7 @@ Mavlink::task_main(int argc, char *argv[])
 
 	while (!_task_should_exit) {
 		/* main loop */
-		px4_usleep(200);
+		px4_usleep(_main_loop_delay);
 
 		if (!should_transmit()) {
 			check_requested_subscriptions();
@@ -2403,7 +2408,7 @@ Mavlink::task_main(int argc, char *argv[])
 			}
 		}
 
-		// check_requested_subscriptions();
+		check_requested_subscriptions();
 
 		/* update streams */
 		for (const auto &stream : _streams) {
