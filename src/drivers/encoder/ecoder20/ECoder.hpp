@@ -71,8 +71,6 @@ public:
 	/** @see ModuleBase::print_status() */
 	int print_status() override;
 
-	int	init();
-
 	ECoderReader * reader0 = nullptr;
 	ECoderReader * reader1 = nullptr;
 	char		_device0[20] {};

@@ -39,7 +39,6 @@ using namespace time_literals;
 
 ECoder::ECoder(const char *device0, const char * device1) :
 	ModuleParams(nullptr),
-
 	_publish_interval_perf(perf_alloc(PC_INTERVAL, MODULE_NAME": publish interval"))
 {
 	if (device0) {
@@ -48,26 +47,13 @@ ECoder::ECoder(const char *device0, const char * device1) :
 	}
 	if (device1) {
 		PX4_INFO("start ecoder 1 on %s", device1);
-		reader1 = new ECoderReader("ecoder_0", 1, device1);
+		reader1 = new ECoderReader("ecoder_1", 1, device1);
 	}
 }
 
 ECoder::~ECoder()
 {
 	perf_free(_publish_interval_perf);
-}
-
-int
-ECoder::init()
-{
-	int ret = 0;
-	if (reader0) {
-		ret = reader0->init();
-	}
-	if (reader1) {
-		ret += reader1->init();
-	}
-	return ret;
 }
 
 int

@@ -12,9 +12,7 @@ static uint8_t commands[] {
 	0x1A //Read single multi precision
 };
 
-uint8_t ECoderReader::CRC8X1[CRC_TAB_SIZE];
 uint8_t CRC_C(uint8_t *CRCbuf, uint8_t* CRC_8X1,uint8_t Length);
-void CRC_8X1_TAB_Creat(uint8_t *CRC_8X1);
 const px4::wq_config_t getEncoderWqConfig(int reader_id) {
 	if (reader_id == 0) {
 		return px4::wq_configurations::motor_encoder0;
@@ -42,7 +40,8 @@ ECoderReader::~ECoderReader() {
 }
 
 int ECoderReader::init() {
-	_rcs_fd = open(_device, O_RDWR | O_NOCTTY | O_NONBLOCK|O_DIRECT);
+	PX4_INFO("Try to open %s", _device);
+	_rcs_fd = open(_device, O_RDWR | O_NOCTTY | O_NONBLOCK);
 	struct termios t;
 	tcgetattr(_rcs_fd, &t);
 	t.c_cflag &= ~(CSIZE | PARENB | CSTOPB | CRTSCTS);
@@ -55,6 +54,7 @@ int ECoderReader::init() {
 		PX4_ERR("ECoder %d open device %s for ecoder with 2.5Mbps failed", _reader_id, _device);
 		return PX4_ERROR;
 	} else {
+		_initialized = true;
 		PX4_INFO("ECoder %d succ opened device %s for ecoder with 2.5Mbps", _reader_id, _device);
 		return PX4_OK;
 	}
@@ -196,7 +196,7 @@ uint8_t CRC_C(uint8_t *CRCbuf, uint8_t* CRC_8X1,uint8_t Length)
 	return CRCResult;
 }
 
-void CRC_8X1_TAB_Creat(uint8_t *CRC_8X1)
+void ECoderReader::CRC_8X1_TAB_Creat(uint8_t *CRC_8X1)
 {
 	uint16_t i,j;
 	uint8_t CRCResult;

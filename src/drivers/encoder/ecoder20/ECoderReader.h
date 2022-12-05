@@ -18,7 +18,7 @@ class ECoderReader : public px4::ScheduledWorkItem {
 	uint8_t _serial_buf[ECODER_BUFFER_SIZE] {};
 	uint8_t _serial_write_buf[ECODER_WRITE_SIZE] {};
 	int _reader_id;
-	static uint8_t CRC8X1[CRC_TAB_SIZE];
+	uint8_t CRC8X1[CRC_TAB_SIZE];
 	void Run() override;
 	perf_counter_t	_cycle_perf{0};
 	perf_counter_t	_process_perf{0};
@@ -48,4 +48,6 @@ public:
 	ECoderReader(const char * module_name, int reader_id, const char *device);
 	virtual ~ECoderReader();
 	void print_status();
+	static void CRC_8X1_TAB_Creat(uint8_t *CRC_8X1);
 };
+
