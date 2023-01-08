@@ -755,7 +755,7 @@ void VehicleAngularVelocity::CalibrateAndPublish(bool publish, const hrt_abstime
 {
 	// Angular velocity: rotate sensor frame to board, scale raw data to SI, apply calibration, and remove in-run estimated bias
 	_angular_velocity_prev = _angular_velocity;
-	_angular_velocity = _calibration.Correct(angular_velocity_unscaled) - _bias;
+	_angular_velocity = _calibration.Correct(angular_velocity_unscaled);
 
 	// Angular acceleration: rotate sensor frame to board, scale raw data to SI, apply any additional configured rotation
 	_angular_acceleration = _calibration.rotation() * angular_acceleration_unscaled;
