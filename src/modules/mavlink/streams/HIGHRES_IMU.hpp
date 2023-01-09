@@ -43,6 +43,7 @@
 #include <uORB/topics/vehicle_magnetometer.h>
 #include <uORB/topics/vehicle_acceleration.h>
 #include <uORB/topics/vehicle_angular_velocity.h>
+#include <uORB/topics/battery_status.h>
 
 using matrix::Vector3f;
 
@@ -74,11 +75,13 @@ private:
 	uORB::Subscription _air_data_sub{ORB_ID(vehicle_air_data)};
 	uORB::Subscription _angular_velocity_sub{ORB_ID(vehicle_angular_velocity)};
 	uORB::Subscription _acceleration_sub{ORB_ID(vehicle_acceleration)};
+	uORB::Subscription _battery_status_sub{ORB_ID(battery_status)};
 
 	bool updated_ang_vel = false;
 	bool updated_acc = false;
 	vehicle_acceleration_s ang_vel;
 	vehicle_angular_velocity_s acc;
+	battery_status_s battery_status;
 
 	bool send() override
 	{
@@ -88,6 +91,10 @@ private:
 		if (_acceleration_sub.update(&acc)) {
 			updated_acc = true;
 		}
+		if (_battery_status_sub.update(&battery_status)) {
+			//TODO
+		}
+		float current = battery_status.current_filtered_a;
 		if (updated_ang_vel || updated_acc) {
 			updated_ang_vel = false;
 			updated_acc = false;
@@ -139,7 +146,12 @@ private:
 			msg.time_usec = ang_vel.timestamp_sample;
 			msg.xacc = accel(0);
 			msg.yacc = accel(1);
-			msg.zacc = accel(2);
+			// bias: 1.344 x - 0.2016 if I < 0.15
+			if (current < 0.15f) {
+				msg.zacc = accel(2) + current*1.344f - 0.2016f;
+			} else {
+				msg.zacc = accel(2);
+			}
 			msg.xgyro = gyro(0);
 			msg.ygyro = gyro(1);
 			msg.zgyro = gyro(2);
