@@ -1645,11 +1645,11 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 
 		configure_stream_local("ADSB_VEHICLE", unlimited_rate);
 		configure_stream_local("ATTITUDE_TARGET", 20.0f);
-		configure_stream_local("BATTERY_STATUS", 0.5f);
+		configure_stream_local("BATTERY_STATUS", 20.0f);
 		configure_stream_local("CAMERA_IMAGE_CAPTURED", unlimited_rate);
 		configure_stream_local("COLLISION", unlimited_rate);
 		configure_stream_local("ESTIMATOR_STATUS", 1.0f);
-		configure_stream_local("EXTENDED_SYS_STATE", 1.0f);
+		configure_stream_local("EXTENDED_SYS_STATE", 20.0f);
 		configure_stream_local("GLOBAL_POSITION_INT", 5.0f);
 		configure_stream_local("GPS2_RAW", 1.0f);
 		configure_stream_local("GPS_GLOBAL_ORIGIN", 1.0f);
@@ -1669,6 +1669,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 		configure_stream_local("VFR_HUD", 4.0f);
 		configure_stream_local("VIBRATION", 0.5f);
 		configure_stream_local("WIND_COV", 1.0f);
+		configure_stream_local("HEARTBEAT", 20.0f);
 
 #if !defined(CONSTRAINED_FLASH)
 		configure_stream_local("DEBUG", 1.0f);
