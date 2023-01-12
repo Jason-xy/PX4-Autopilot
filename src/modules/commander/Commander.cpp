@@ -507,20 +507,20 @@ transition_result_t Commander::arm(arm_disarm_reason_t calling_reason, bool run_
 	}
 
 	if (run_preflight_checks) {
-		if (_vehicle_control_mode.flag_control_manual_enabled) {
-			if (_vehicle_control_mode.flag_control_climb_rate_enabled && _manual_control.isThrottleAboveCenter()) {
-				mavlink_log_critical(&_mavlink_log_pub, "Arming denied: throttle above center");
-				tune_negative(true);
-				return TRANSITION_DENIED;
+		// if (_vehicle_control_mode.flag_control_manual_enabled) {
+		// 	if (_vehicle_control_mode.flag_control_climb_rate_enabled && _manual_control.isThrottleAboveCenter()) {
+		// 		mavlink_log_critical(&_mavlink_log_pub, "Arming denied: throttle above center");
+		// 		tune_negative(true);
+		// 		return TRANSITION_DENIED;
 
-			}
+		// 	}
 
-			if (!_vehicle_control_mode.flag_control_climb_rate_enabled && !_manual_control.isThrottleLow()) {
-				mavlink_log_critical(&_mavlink_log_pub, "Arming denied: high throttle");
-				tune_negative(true);
-				return TRANSITION_DENIED;
-			}
-		}
+		// 	if (!_vehicle_control_mode.flag_control_climb_rate_enabled && !_manual_control.isThrottleLow()) {
+		// 		mavlink_log_critical(&_mavlink_log_pub, "Arming denied: high throttle");
+		// 		tune_negative(true);
+		// 		return TRANSITION_DENIED;
+		// 	}
+		// }
 
 		if ((_param_geofence_action.get() == geofence_result_s::GF_ACTION_RTL)
 		    && !_status_flags.condition_home_position_valid) {
