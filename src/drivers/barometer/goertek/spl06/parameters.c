@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2018 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,22 +31,11 @@
  *
  ****************************************************************************/
 
-#include <px4_arch/spi_hw_description.h>
-#include <drivers/drv_sensor.h>
-#include <nuttx/spi/spi.h>
-
-constexpr px4_spi_bus_t px4_spi_buses[SPI_BUS_MAX_BUS_ITEMS] = {
-	initSPIBus(SPI::Bus::SPI1, {
-		initSPIDevice(DRV_IMU_DEVTYPE_ICM42688P, SPI::CS{GPIO::PortB, GPIO::Pin12}),
-		initSPIDevice(DRV_IMU_DEVTYPE_ICM20602, SPI::CS{GPIO::PortB, GPIO::Pin12}),
-	}),
-	initSPIBus(SPI::Bus::SPI2, {
-		initSPIDevice(SPIDEV_MMCSD(0), SPI::CS{GPIO::PortB, GPIO::Pin12}),
-	}),
-	initSPIBus(SPI::Bus::SPI3, {
-		initSPIDevice(DRV_BARO_DEVTYPE_SPL06, SPI::CS{GPIO::PortB, GPIO::Pin3}),
-		// initSPIDevice(DRV_OSD_DEVTYPE_ATXXXX, SPI::CS{GPIO::PortA, GPIO::Pin15}),
-	}),
-};
-
-static constexpr bool unused = validateSPIConfig(px4_spi_buses);
+/**
+ * Goertek SPL06 Barometer (external I2C)
+ *
+ * @reboot_required true
+ * @group Sensors
+ * @boolean
+  */
+PARAM_DEFINE_INT32(SENS_EN_SPL06, 1);

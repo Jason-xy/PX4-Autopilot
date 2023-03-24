@@ -16,7 +16,7 @@ px4_add_board(
 	DRIVERS
 		adc/board_adc
 		#barometer # all available barometer drivers
-		barometer/bmp280
+		barometer/goertek/spl06
 		#batt_smbus
 		#camera_trigger
 		#differential_pressure # all available differential pressure drivers
@@ -24,7 +24,7 @@ px4_add_board(
 		dshot
 		gps
 		# imu/invensense/icm20602
-		imu/invensense/mpu6000
+		imu/invensense/icm42688p
 		#irlock
 		lights/rgbled
 		#magnetometer # all available magnetometer drivers

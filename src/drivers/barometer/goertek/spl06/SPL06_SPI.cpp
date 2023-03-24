@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2016-2019 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,51 +31,70 @@
  *
  ****************************************************************************/
 
-#pragma once
+/**
+ * @file spl06_spi.cpp
+ *
+ * SPI interface for Goertek SPL06
+ */
 
-#include "bmp280.h"
+#include "spl06.h"
 
-#include <drivers/drv_hrt.h>
 #include <px4_platform_common/px4_config.h>
-#include <px4_platform_common/i2c_spi_buses.h>
-#include <px4_platform_common/px4_work_queue/ScheduledWorkItem.hpp>
-#include <lib/drivers/barometer/PX4Barometer.hpp>
-#include <lib/perf/perf_counter.h>
+#include <drivers/device/spi.h>
 
-class BMP280 : public I2CSPIDriver<BMP280>
+/* SPI protocol address bits */
+#define DIR_READ			(1<<7)  //for set
+#define DIR_WRITE			~(1<<7) //for clear
+
+class SPL06_SPI: public device::SPI, public spl06::ISPL06
 {
 public:
-	BMP280(I2CSPIBusOption bus_option, int bus, bmp280::IBMP280 *interface);
-	virtual ~BMP280();
+	SPL06_SPI(uint8_t bus, uint32_t device, int bus_frequency, spi_mode_e spi_mode);
+	virtual ~SPL06_SPI() override = default;
 
-	static I2CSPIDriverBase *instantiate(const BusCLIArguments &cli, const BusInstanceIterator &iterator,
-					    int runtime_instance);
-	static void print_usage();
+	int init() override { return SPI::init(); }
 
-	int			init();
-	void			print_status();
+	uint8_t	get_reg(uint8_t addr) override;
+	int	set_reg(uint8_t value, uint8_t addr) override;
 
-	void			RunImpl();
-private:
-	void			Start();
+	int read(uint8_t addr, uint8_t *buf, uint8_t len) override;
 
-	int			measure(); //start measure
-	int			collect(); //get results and publish
+	uint32_t get_device_id() const override { return device::SPI::get_device_id(); }
 
-	PX4Barometer		_px4_baro;
-
-	bmp280::IBMP280		*_interface;
-
-	// set config, recommended settings
-	static constexpr uint8_t	_curr_ctrl{BMP280_CTRL_P16 | BMP280_CTRL_T2};
-	static constexpr uint32_t	_measure_interval{BMP280_MT_INIT + BMP280_MT *(16 - 1 + 2 - 1)};
-
-	bool			_collect_phase{false};
-
-	perf_counter_t		_sample_perf;
-	perf_counter_t		_measure_perf;
-	perf_counter_t		_comms_errors;
-
-	bmp280::calibration_s	*_cal{nullptr}; //stored calibration constants
-	bmp280::fcalibration_s	_fcal{}; //pre processed calibration constants
+	uint8_t get_device_address() const override { return device::SPI::get_device_address(); }
 };
+
+spl06::ISPL06 *
+spl06_spi_interface(uint8_t busnum, uint32_t device, int bus_frequency, spi_mode_e spi_mode)
+{
+	return new SPL06_SPI(busnum, device, bus_frequency, spi_mode);
+}
+
+SPL06_SPI::SPL06_SPI(uint8_t bus, uint32_t device, int bus_frequency, spi_mode_e spi_mode) :
+	SPI(DRV_BARO_DEVTYPE_SPL06, MODULE_NAME, bus, device, spi_mode, bus_frequency)
+{
+}
+
+uint8_t
+SPL06_SPI::get_reg(uint8_t addr)
+{
+	uint8_t cmd[2] = { (uint8_t)(addr | DIR_READ), 0}; // set MSB bit
+	transfer(&cmd[0], &cmd[0], 2);
+
+	return cmd[1];
+}
+
+int
+SPL06_SPI::set_reg(uint8_t value, uint8_t addr)
+{
+	uint8_t cmd[2] = { (uint8_t)(addr & DIR_WRITE), value}; // clear MSB bit
+	return transfer(&cmd[0], nullptr, 2);
+}
+
+int
+SPL06_SPI::read(uint8_t addr, uint8_t *buf, uint8_t len)
+{
+	uint8_t tx_buf[len + 1] = {(uint8_t)(addr | DIR_READ)}; // GCC support VLA, let's use it
+
+	return transfer(tx_buf, buf, len);
+}

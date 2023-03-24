@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2016-2019 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,51 +31,78 @@
  *
  ****************************************************************************/
 
+/**
+ * @file spl06.h
+ *
+ * Shared defines for the spl06 driver.
+ */
 #pragma once
 
-#include "bmp280.h"
-
-#include <drivers/drv_hrt.h>
-#include <px4_platform_common/px4_config.h>
 #include <px4_platform_common/i2c_spi_buses.h>
-#include <px4_platform_common/px4_work_queue/ScheduledWorkItem.hpp>
-#include <lib/drivers/barometer/PX4Barometer.hpp>
-#include <lib/perf/perf_counter.h>
 
-class BMP280 : public I2CSPIDriver<BMP280>
+#define SPL06_ADDR_ID	0x0d
+#define SPL06_ADDR_RESET 0x0c   // set to reset
+#define SPL06_ADDR_CAL 0x10
+#define SPL06_ADDR_PRS_CFG  0x06
+#define SPL06_ADDR_TMP_CFG  0x07
+#define SPL06_ADDR_MEAS_CFG	0x08
+#define SPL06_ADDR_CFG_REG	0x09
+#define SPL06_ADDR_DATA 0x00
+
+
+#define SPL06_VALUE_RESET 9
+#define SPL06_VALUE_ID    0x10
+
+namespace spl06
+{
+
+#pragma pack(push,1)
+struct calibration_s {
+	int16_t c0, c1;
+	int32_t c00, c10;
+	int16_t c01, c11, c20, c21, c30;
+}; //calibration data
+
+struct data_s {
+	uint8_t p_msb;
+	uint8_t p_lsb;
+	uint8_t p_xlsb;
+
+	uint8_t t_msb;
+	uint8_t t_lsb;
+	uint8_t t_xlsb;
+}; // data
+#pragma pack(pop)
+
+class ISPL06
 {
 public:
-	BMP280(I2CSPIBusOption bus_option, int bus, bmp280::IBMP280 *interface);
-	virtual ~BMP280();
+	virtual ~ISPL06() = default;
 
-	static I2CSPIDriverBase *instantiate(const BusCLIArguments &cli, const BusInstanceIterator &iterator,
-					    int runtime_instance);
-	static void print_usage();
+	virtual int init() = 0;
 
-	int			init();
-	void			print_status();
+	// read reg value
+	virtual uint8_t get_reg(uint8_t addr) = 0;
 
-	void			RunImpl();
-private:
-	void			Start();
+	// write reg value
+	virtual int set_reg(uint8_t value, uint8_t addr) = 0;
 
-	int			measure(); //start measure
-	int			collect(); //get results and publish
+	// bulk read of data into buffer, return same pointer
+	virtual int read(uint8_t addr, uint8_t *buf, uint8_t len) = 0;
+	// bulk read of calibration data into buffer, return same pointer
 
-	PX4Barometer		_px4_baro;
+	virtual uint32_t get_device_id() const = 0;
 
-	bmp280::IBMP280		*_interface;
-
-	// set config, recommended settings
-	static constexpr uint8_t	_curr_ctrl{BMP280_CTRL_P16 | BMP280_CTRL_T2};
-	static constexpr uint32_t	_measure_interval{BMP280_MT_INIT + BMP280_MT *(16 - 1 + 2 - 1)};
-
-	bool			_collect_phase{false};
-
-	perf_counter_t		_sample_perf;
-	perf_counter_t		_measure_perf;
-	perf_counter_t		_comms_errors;
-
-	bmp280::calibration_s	*_cal{nullptr}; //stored calibration constants
-	bmp280::fcalibration_s	_fcal{}; //pre processed calibration constants
+	virtual uint8_t get_device_address() const = 0;
 };
+
+} /* namespace */
+
+
+/* interface factories */
+#if defined(CONFIG_SPI)
+extern spl06::ISPL06 *spl06_spi_interface(uint8_t busnum, uint32_t device, int bus_frequency, spi_mode_e spi_mode);
+#endif // CONFIG_SPI
+#if defined(CONFIG_I2C)
+extern spl06::ISPL06 *spl06_i2c_interface(uint8_t busnum, uint32_t device, int bus_frequency);
+#endif // CONFIG_I2C
