@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# Omnibus F4SD specific board sensors init
+#------------------------------------------------------------------------------
+
+board_adc start
+
+icm42688p -R 6 -s start
+
+spl06 -I start

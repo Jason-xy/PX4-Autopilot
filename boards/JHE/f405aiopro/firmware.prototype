@@ -1,0 +1,13 @@
+{
+    "board_id": 43,
+    "magic": "JHEF405AIOPRO",
+    "description": "Firmware for the JHEF405AIOPro board",
+    "image": "",
+    "build_time": 0,
+    "summary": "PX4/JHEF405AIO",
+    "version": "0.1",
+    "image_size": 0,
+    "image_maxsize": 1032192,
+    "git_identity": "",
+    "board_revision": 0
+}

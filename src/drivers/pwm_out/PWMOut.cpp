@@ -146,7 +146,7 @@ int PWMOut::set_pwm_rate(unsigned rate_map, unsigned default_rate, unsigned alt_
 		return -EINVAL;
 	}
 
-	PX4_DEBUG("pwm_out%u set_pwm_rate %x %u %u", _instance, rate_map, default_rate, alt_rate);
+	PX4_DEBUG("pwm_out%d set_pwm_rate %x %d %d", _instance, rate_map, default_rate, alt_rate);
 
 	for (unsigned pass = 0; pass < 2; pass++) {
 
@@ -179,7 +179,7 @@ int PWMOut::set_pwm_rate(unsigned rate_map, unsigned default_rate, unsigned alt_
 			if (pass == 0) {
 				// preflight
 				if ((alt != 0) && (alt != mask)) {
-					PX4_WARN("rate group %u mask %" PRIx32 " bad overlap %" PRIx32, group, mask, alt);
+					PX4_WARN("rate group %d mask %" PRIx32 " bad overlap %" PRIx32, group, mask, alt);
 					// not a legal map, bail
 					return -EINVAL;
 				}
@@ -309,7 +309,7 @@ bool PWMOut::update_pwm_out_state(bool on)
 				}
 
 				char param_name[17];
-				snprintf(param_name, sizeof(param_name), "%s_TIM%u", _mixing_output.paramPrefix(), timer);
+				snprintf(param_name, sizeof(param_name), "%s_TIM%d", _mixing_output.paramPrefix(), timer);
 
 				int32_t tim_config = 0;
 				param_t handle = param_find(param_name);
@@ -556,7 +556,7 @@ void PWMOut::update_params()
 	for (unsigned i = 0; i < _num_outputs; i++) {
 		// PWM_MAIN_MINx
 		{
-			sprintf(str, "%s_MIN%u", prefix, i + 1);
+			sprintf(str, "%s_MIN%d", prefix, i + 1);
 			int32_t pwm_min = -1;
 
 			if (param_get(param_find(str), &pwm_min) == PX4_OK) {
@@ -579,7 +579,7 @@ void PWMOut::update_params()
 
 		// PWM_MAIN_MAXx
 		{
-			sprintf(str, "%s_MAX%u", prefix, i + 1);
+			sprintf(str, "%s_MAX%d", prefix, i + 1);
 			int32_t pwm_max = -1;
 
 			if (param_get(param_find(str), &pwm_max) == PX4_OK) {
@@ -602,7 +602,7 @@ void PWMOut::update_params()
 
 		// PWM_MAIN_FAILx
 		{
-			sprintf(str, "%s_FAIL%u", prefix, i + 1);
+			sprintf(str, "%s_FAIL%d", prefix, i + 1);
 			int32_t pwm_failsafe = -1;
 
 			if (param_get(param_find(str), &pwm_failsafe) == PX4_OK) {
@@ -622,7 +622,7 @@ void PWMOut::update_params()
 
 		// PWM_MAIN_DISx
 		{
-			sprintf(str, "%s_DIS%u", prefix, i + 1);
+			sprintf(str, "%s_DIS%d", prefix, i + 1);
 			int32_t pwm_dis = -1;
 
 			if (param_get(param_find(str), &pwm_dis) == PX4_OK) {
@@ -649,7 +649,7 @@ void PWMOut::update_params()
 
 		// PWM_MAIN_REVx
 		{
-			sprintf(str, "%s_REV%u", prefix, i + 1);
+			sprintf(str, "%s_REV%d", prefix, i + 1);
 			int32_t pwm_rev = 0;
 
 			if (param_get(param_find(str), &pwm_rev) == PX4_OK) {
@@ -672,7 +672,7 @@ void PWMOut::update_params()
 		int16_t values[FMU_MAX_ACTUATORS] {};
 
 		for (unsigned i = 0; i < _num_outputs; i++) {
-			sprintf(str, "%s_TRIM%u", prefix, i + 1);
+			sprintf(str, "%s_TRIM%d", prefix, i + 1);
 
 			float pval = 0.0f;
 
@@ -708,7 +708,7 @@ int PWMOut::pwm_ioctl(device::file_t *filp, int cmd, unsigned long arg)
 {
 	int ret = OK;
 
-	PX4_DEBUG("pwm_out%u: ioctl cmd: %d, arg: %ld", _instance, cmd, arg);
+	PX4_DEBUG("pwm_out%d: ioctl cmd: %d, arg: %ld", _instance, cmd, arg);
 
 	switch (cmd) {
 	case PWM_SERVO_ARM:
