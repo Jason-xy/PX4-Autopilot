@@ -61,6 +61,11 @@ RCInput::RCInput(const char *device) :
 		strncpy(_device, device, sizeof(_device) - 1);
 		_device[sizeof(_device) - 1] = '\0';
 	}
+
+	if ((_param_rc_input_proto.get() >= 0) && (_param_rc_input_proto.get() <= RC_SCAN::RC_SCAN_GHST)) {
+		_rc_scan_state = static_cast<RC_SCAN>(_param_rc_input_proto.get());
+	}
+
 }
 
 RCInput::~RCInput()
@@ -242,9 +247,21 @@ RCInput::fill_rc_in(uint16_t raw_rc_count_local,
 
 void RCInput::set_rc_scan_state(RC_SCAN newState)
 {
-	PX4_DEBUG("RCscan: %s failed, trying %s", RCInput::RC_SCAN_STRING[_rc_scan_state], RCInput::RC_SCAN_STRING[newState]);
+	if ((_param_rc_input_proto.get() >= RC_SCAN::RC_SCAN_PPM) //RC_SCAN::RC_SCAN_PPM = 0
+	    && (_param_rc_input_proto.get() <= RC_SCAN::RC_SCAN_GHST)) {
+
+		_rc_scan_state = static_cast<RC_SCAN>(_param_rc_input_proto.get());
+
+	} else if (_param_rc_input_proto.get() < 0) {
+		// only auto change if RC_INPUT_PROTO set to auto (-1)
+		PX4_DEBUG("RCscan: %s failed, trying %s", RCInput::RC_SCAN_STRING[_rc_scan_state], RCInput::RC_SCAN_STRING[newState]);
+		_rc_scan_state = newState;
+
+	} else {
+		_rc_scan_state = RC_SCAN::RC_SCAN_CRSF;
+	}
+
 	_rc_scan_begin = 0;
-	_rc_scan_state = newState;
 	_rc_scan_locked = false;
 }
 
@@ -703,6 +720,20 @@ void RCInput::Run()
 
 		} else if (!rc_updated && ((hrt_absolute_time() - _rc_in.timestamp_last_signal) > 1_s)) {
 			_rc_scan_locked = false;
+		}
+
+		if (_rc_scan_locked) {
+			PX4_INFO("RC scan: %s RC input locked", RC_SCAN_STRING[_rc_scan_state]);
+		}
+
+		// set RC_INPUT_PROTO if RC successfully locked for > 3 seconds
+		if (!_armed && rc_updated && _rc_scan_locked
+		    && ((_rc_scan_begin != 0) && hrt_elapsed_time(&_rc_scan_begin) > 3_s)
+		    && (_param_rc_input_proto.get() < 0)
+		   ) {
+			// RC_INPUT_PROTO auto => locked selection
+			_param_rc_input_proto.set(_rc_scan_state);
+			_param_rc_input_proto.commit();
 		}
 	}
 }
