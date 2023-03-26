@@ -11,8 +11,8 @@ px4_add_board(
 	CONSTRAINED_FLASH
 	SERIAL_PORTS
 		TEL1:/dev/ttyS5
-		TEL2:/dev/ttyS0
-		RC:/dev/ttyS3 # UART4
+		TEL2:/dev/ttyS3
+		RC:/dev/ttyS0 # UART1
 	DRIVERS
 		adc/board_adc
 		#barometer # all available barometer drivers
